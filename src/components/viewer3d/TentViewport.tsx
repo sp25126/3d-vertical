@@ -704,6 +704,9 @@ export const TentViewport: React.FC<TentViewportProps> = ({
               if (mat.name === 'fabric_Mat') {
                 // Outer custom printed canopy surface
                 const canvasTex = textureSyncService.getTexture()
+                if (canvasTex) {
+                  canvasTex.flipY = false
+                }
                 const newFabricMat = new THREE.MeshStandardMaterial({
                   map: canvasTex,
                   roughness: 0.65,
@@ -773,6 +776,9 @@ export const TentViewport: React.FC<TentViewportProps> = ({
   useEffect(() => {
     if (fabricMaterialRef.current) {
       const canvasTex = textureSyncService.getTexture()
+      if (canvasTex) {
+        canvasTex.flipY = false
+      }
       fabricMaterialRef.current.map = canvasTex
       if (fabricMaterialRef.current.map) {
         fabricMaterialRef.current.map.needsUpdate = true

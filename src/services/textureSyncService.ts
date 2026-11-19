@@ -20,73 +20,73 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
   peak_front: {
     zoneId: 'peak_front',
     u: 0.500,
-    v: 0.294,
-    w: 0.40,
+    v: 0.740,
+    w: 0.44,
     h: 0.28,
+    rotation: 0,
+    flipY: false
+  },
+  valance_front: {
+    zoneId: 'valance_front',
+    u: 0.500,
+    v: 0.940,
+    w: 0.84,
+    h: 0.065,
     rotation: 0,
     flipY: false
   },
   peak_back: {
     zoneId: 'peak_back',
-    u: 0.519,
-    v: 0.689,
-    w: 0.40,
+    u: 0.500,
+    v: 0.260,
+    w: 0.44,
     h: 0.28,
+    rotation: Math.PI,
+    flipY: false
+  },
+  valance_back: {
+    zoneId: 'valance_back',
+    u: 0.500,
+    v: 0.060,
+    w: 0.84,
+    h: 0.065,
     rotation: Math.PI,
     flipY: false
   },
   peak_right: {
     zoneId: 'peak_right',
-    u: 0.697,
-    v: 0.497,
-    w: 0.40,
-    h: 0.28,
-    rotation: Math.PI / 2,
-    flipY: false
-  },
-  peak_left: {
-    zoneId: 'peak_left',
-    u: 0.291,
-    v: 0.503,
-    w: 0.40,
+    u: 0.740,
+    v: 0.500,
+    w: 0.44,
     h: 0.28,
     rotation: -Math.PI / 2,
     flipY: false
   },
-  valance_front: {
-    zoneId: 'valance_front',
-    u: 0.501,
-    v: 0.069,
-    w: 0.42,
-    h: 0.075,
-    rotation: 0,
-    flipY: false
-  },
-  valance_back: {
-    zoneId: 'valance_back',
-    u: 0.546,
-    v: 0.894,
-    w: 0.42,
-    h: 0.075,
-    rotation: Math.PI,
-    flipY: false
-  },
   valance_right: {
     zoneId: 'valance_right',
-    u: 0.919,
-    v: 0.502,
-    w: 0.42,
-    h: 0.075,
+    u: 0.940,
+    v: 0.500,
+    w: 0.84,
+    h: 0.065,
+    rotation: -Math.PI / 2,
+    flipY: false
+  },
+  peak_left: {
+    zoneId: 'peak_left',
+    u: 0.260,
+    v: 0.500,
+    w: 0.44,
+    h: 0.28,
     rotation: Math.PI / 2,
     flipY: false
   },
   valance_left: {
     zoneId: 'valance_left',
-    u: 0.080,
-    v: 0.515,
-    w: 0.42,
-    h: 0.075,
-    rotation: -Math.PI / 2,
+    u: 0.060,
+    v: 0.500,
+    w: 0.84,
+    h: 0.065,
+    rotation: Math.PI / 2,
     flipY: false
   }
 }
@@ -105,6 +105,7 @@ class TextureSyncService {
 
       this.canvasTexture = new THREE.CanvasTexture(this.masterCanvas)
       this.canvasTexture.colorSpace = THREE.SRGBColorSpace
+      this.canvasTexture.flipY = false
       this.canvasTexture.generateMipmaps = true
       this.canvasTexture.minFilter = THREE.LinearMipmapLinearFilter
       this.canvasTexture.magFilter = THREE.LinearFilter
