@@ -32,6 +32,9 @@ export interface TextElement extends BaseElement {
   fontWeight: string | number
   fontStyle?: 'normal' | 'italic'
   textAlign?: 'left' | 'center' | 'right'
+  letterSpacing?: number
+  strokeColor?: string
+  strokeWidth?: number
 }
 
 export interface ImageElement extends BaseElement {

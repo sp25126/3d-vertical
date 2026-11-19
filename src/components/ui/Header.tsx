@@ -15,7 +15,6 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
     pricing,
     isPricingLoading,
     cart,
-    toggleCart,
     setModelId,
     loadPreset,
     resetConfig
@@ -24,89 +23,92 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
   const [isPresetsOpen, setIsPresetsOpen] = useState(false)
 
   return (
-    <header className="h-16 px-4 md:px-6 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between z-30 sticky top-0 backdrop-blur select-none">
+    <header className="h-16 px-4 md:px-6 bg-studio-950/95 border-b border-white/10 flex items-center justify-between z-30 sticky top-0 backdrop-blur-xl select-none">
       {/* Brand & Title */}
       <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-amber-400 flex items-center justify-center font-black text-slate-950 text-sm shadow-md">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-gold-600 via-gold-500 to-amber-300 flex items-center justify-center font-black text-slate-950 text-sm shadow-glow-gold tracking-tight">
             MVP
           </div>
-          <div className="hidden sm:block">
-            <h1 className="text-sm font-extrabold tracking-tight text-white flex items-center space-x-1.5">
-              <span>CANOPY TENT</span>
-              <span className="text-[10px] bg-brand-500/20 text-brand-400 border border-brand-500/30 px-1.5 py-0.5 rounded font-mono font-semibold">
-                3D STUDIO
+          <div>
+            <div className="flex items-center space-x-1.5">
+              <span className="text-sm font-black tracking-tight text-white font-display">
+                CANOPY STUDIO
               </span>
-            </h1>
-            <p className="text-[11px] text-slate-400">Professional Interactive Configurator</p>
+              <span className="text-[9px] bg-gold-500/15 text-gold-400 border border-gold-500/30 px-1.5 py-0.2 rounded font-mono font-bold tracking-wider">
+                PRO 3D
+              </span>
+            </div>
+            <p className="text-[10px] text-studio-500 font-mono hidden sm:block">Commercial Interactive Configurator</p>
           </div>
         </div>
 
-        {/* Model Dimension Selector Pills */}
-        <div className="hidden md:flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/80 ml-4">
+        {/* Model Dimension Selector Segmented Pills */}
+        <div className="hidden lg:flex items-center bg-studio-900 p-1 rounded-xl border border-white/5 ml-4">
           {(Object.keys(TENT_MODELS) as ProductModelId[]).map((mId) => {
             const isSelected = config.modelId === mId
+            const m = TENT_MODELS[mId]
             return (
               <button
                 key={mId}
                 onClick={() => setModelId(mId)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                   isSelected
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/60'
+                    ? 'bg-gold-500 text-slate-950 shadow-glow-gold'
+                    : 'text-slate-400 hover:text-white hover:bg-studio-800'
                 }`}
               >
-                {mId}
+                <span>{mId}</span>
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Center Actions: Presets & Reset */}
+      {/* Center Actions: Brand Presets & Reset */}
       <div className="flex items-center space-x-2">
         {/* Presets Dropdown */}
         <div className="relative">
           <button
             onClick={() => setIsPresetsOpen(!isPresetsOpen)}
-            className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-colors"
+            className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-studio-850 text-slate-200 border border-white/10 hover:bg-studio-800 transition-all shadow-studio-card"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Presets</span>
+            <Sparkles className="w-3.5 h-3.5 text-gold-400" />
+            <span className="hidden sm:inline">Brand Presets</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
           {isPresetsOpen && (
-            <div className="absolute top-full mt-2 left-0 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-1 z-50">
+            <div className="absolute top-full mt-2 left-0 w-52 bg-studio-900 border border-white/10 rounded-2xl shadow-2xl py-1.5 z-50 backdrop-blur-xl">
               <button
                 onClick={() => {
                   loadPreset('tech_expo')
                   setIsPresetsOpen(false)
                 }}
-                className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-700 flex flex-col"
+                className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-studio-800 flex flex-col transition-colors"
               >
-                <span className="font-semibold text-white">Tech Expo 2026</span>
-                <span className="text-[10px] text-slate-400">10x10 • Royal Blue • Aluminum</span>
+                <span className="font-bold text-white font-display">Tech Expo 2026</span>
+                <span className="text-[10px] text-studio-500 mt-0.5">10x10 • Royal Blue • Aluminum Frame</span>
               </button>
               <button
                 onClick={() => {
                   loadPreset('brewery')
                   setIsPresetsOpen(false)
                 }}
-                className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-700 flex flex-col"
+                className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-studio-800 flex flex-col transition-colors"
               >
-                <span className="font-semibold text-white">Timber & Hops Craft</span>
-                <span className="text-[10px] text-slate-400">8x8 • Jet Black • Steel</span>
+                <span className="font-bold text-white font-display">Timber & Hops Craft</span>
+                <span className="text-[10px] text-studio-500 mt-0.5">8x8 • Jet Black • Steel Hardware</span>
               </button>
               <button
                 onClick={() => {
                   resetConfig()
                   setIsPresetsOpen(false)
                 }}
-                className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-700 flex flex-col border-t border-slate-700/60"
+                className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-studio-800 flex flex-col border-t border-white/5 transition-colors"
               >
-                <span className="font-semibold text-amber-400">Default MVP Visuals</span>
-                <span className="text-[10px] text-slate-400">8x8 • Amber Gold</span>
+                <span className="font-bold text-gold-400 font-display">MVP Visuals Signature</span>
+                <span className="text-[10px] text-studio-500 mt-0.5">8x8 • Amber Gold Poly</span>
               </button>
             </div>
           )}
@@ -116,47 +118,47 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
         <button
           onClick={resetConfig}
           title="Reset to Default"
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="p-2 text-slate-400 hover:text-white hover:bg-studio-850 rounded-xl transition-all border border-transparent hover:border-white/5"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Right Side: Dynamic Price & Cart Trigger */}
+      {/* Right Actions: Live Price Pill, PDF, Shopify Cart */}
       <div className="flex items-center space-x-3">
-        {/* Dynamic Price Pill */}
+        {/* Dynamic Price Telemetry */}
         <div className="flex flex-col items-end">
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-            Total (Estimated)
+          <span className="text-[9px] uppercase tracking-widest font-mono text-studio-500 font-bold">
+            Live Quote
           </span>
-          <div className="flex items-center space-x-1 font-mono text-base font-extrabold text-brand-400">
+          <div className="flex items-center space-x-1 font-mono text-base font-black text-gold-400">
             {isPricingLoading ? (
-              <span className="text-xs text-slate-400 animate-pulse">Calculating...</span>
+              <span className="text-xs text-studio-500 animate-pulse font-mono">Syncing...</span>
             ) : (
               <span>${pricing.finalTotal.toFixed(2)}</span>
             )}
           </div>
         </div>
 
-        {/* Export PDF Button */}
+        {/* Export Production PDF Button */}
         <button
           onClick={onExportPdf}
-          title="Download Production Spec Sheet PDF"
-          className="hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-all shadow-sm"
+          title="Download Print Production Spec Sheet"
+          className="hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-studio-850 hover:bg-studio-800 border border-white/10 text-xs font-bold text-slate-200 transition-all shadow-studio-card"
         >
-          <FileDown className="w-4 h-4 text-brand-400" />
-          <span>Spec PDF</span>
+          <FileDown className="w-3.5 h-3.5 text-gold-400" />
+          <span>Spec Sheet</span>
         </button>
 
         {/* Add to Shopify Cart Button */}
         <button
           onClick={onAddToCart}
-          className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-slate-950 font-black text-xs transition-all shadow-lg shadow-brand-500/20 active:scale-95"
+          className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-500 to-amber-400 hover:from-gold-600 hover:to-amber-500 text-slate-950 font-black text-xs transition-all shadow-glow-gold active:scale-95 font-display"
         >
           <ShoppingBag className="w-4 h-4" />
           <span className="hidden xs:inline">Add to Cart</span>
           {cart.length > 0 && (
-            <span className="w-5 h-5 rounded-full bg-slate-950 text-brand-400 text-[10px] flex items-center justify-center font-bold">
+            <span className="w-5 h-5 rounded-full bg-slate-950 text-gold-400 text-[10px] flex items-center justify-center font-mono font-bold">
               {cart.length}
             </span>
           )}

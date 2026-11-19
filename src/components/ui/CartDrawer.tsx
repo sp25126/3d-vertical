@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
-import { X, ShoppingBag, ArrowRight, CheckCircle2, FileDown, ExternalLink } from 'lucide-react'
+import { X, ShoppingBag, ArrowRight, CheckCircle2, FileDown } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
 interface CartDrawerProps {
@@ -23,8 +23,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
       setCheckoutCompleted(true)
       try {
         confetti({
-          particleCount: 120,
-          spread: 70,
+          particleCount: 140,
+          spread: 80,
           origin: { y: 0.6 }
         })
       } catch (_) {}
@@ -36,26 +36,30 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
       {/* Backdrop */}
       <div
         onClick={() => toggleCart(false)}
-        className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-studio-950/80 backdrop-blur-md transition-opacity"
       />
 
       {/* Slide-over panel */}
-      <div className="relative w-full max-w-md bg-slate-900 border-l border-slate-800 h-full flex flex-col z-10 shadow-2xl text-slate-100">
+      <div className="relative w-full max-w-md bg-studio-900 border-l border-white/10 h-full flex flex-col z-10 shadow-2xl text-slate-100">
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <ShoppingBag className="w-5 h-5 text-brand-400" />
-            <h2 className="text-base font-bold text-white">Your Shopify Cart</h2>
-            <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">
-              {cart.length} {cart.length === 1 ? 'item' : 'items'}
-            </span>
+        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-studio-950/60">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
+              <ShoppingBag className="w-4 h-4 text-gold-400" />
+            </div>
+            <div>
+              <h2 className="text-sm font-extrabold text-white font-display">Shopify Storefront Cart</h2>
+              <span className="text-[10px] text-studio-500 font-mono">
+                {cart.length} {cart.length === 1 ? 'line item' : 'line items'}
+              </span>
+            </div>
           </div>
 
           <button
             onClick={() => toggleCart(false)}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-studio-850 rounded-xl transition-colors border border-transparent hover:border-white/5"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -63,21 +67,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {checkoutCompleted ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-glow-cyan">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-bold text-white">Order Received & Sent to Production!</h3>
-              <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                Your custom canopy order and print proofs have been associated with Shopify Draft Order #MVP-
+              <h3 className="text-lg font-bold text-white font-display">Order Transmitted to Production!</h3>
+              <p className="text-xs text-studio-500 max-w-xs leading-relaxed">
+                Your custom canopy order and high-res print proofs have been associated with Shopify Draft Order #MVP-
                 {Math.floor(100000 + Math.random() * 900000)}.
               </p>
 
-              <div className="w-full space-y-2 pt-4">
+              <div className="w-full space-y-2.5 pt-4">
                 <button
                   onClick={onExportPdf}
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white flex items-center justify-center space-x-2 transition-all"
+                  className="w-full py-3 px-4 rounded-xl bg-gold-500 hover:bg-gold-600 text-slate-950 text-xs font-black flex items-center justify-center space-x-2 transition-all shadow-glow-gold font-display"
                 >
-                  <FileDown className="w-4 h-4 text-brand-400" />
+                  <FileDown className="w-4 h-4" />
                   <span>Download Production Spec PDF</span>
                 </button>
 
@@ -86,17 +90,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
                     setCheckoutCompleted(false)
                     toggleCart(false)
                   }}
-                  className="w-full py-2 px-4 text-xs text-slate-400 hover:text-white transition-colors"
+                  className="w-full py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
                 >
-                  Return to Configurator
+                  Back to Configurator
                 </button>
               </div>
             </div>
           ) : cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-2">
-              <ShoppingBag className="w-12 h-12 text-slate-700 stroke-1" />
-              <p className="text-sm font-medium text-slate-400">Your cart is currently empty.</p>
-              <p className="text-xs max-w-xs">
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-studio-500 space-y-2">
+              <ShoppingBag className="w-12 h-12 text-studio-700 stroke-1" />
+              <p className="text-sm font-bold text-slate-300 font-display">Your cart is empty</p>
+              <p className="text-xs max-w-xs text-studio-500">
                 Customize your canopy tent surfaces and click "Add to Cart" to generate your order payload.
               </p>
             </div>
@@ -104,35 +108,35 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
             cart.map((item) => (
               <div
                 key={item.id}
-                className="p-3.5 bg-slate-800/60 rounded-xl border border-slate-700/70 space-y-3"
+                className="p-4 bg-studio-850/80 rounded-2xl border border-white/10 shadow-studio-card space-y-3"
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="text-xs font-bold text-white">{item.title}</h4>
-                    <span className="text-[11px] text-slate-400">Qty: {item.quantity}</span>
+                    <h4 className="text-xs font-bold text-white font-display">{item.title}</h4>
+                    <span className="text-[10px] text-studio-500 font-mono">Qty: {item.quantity}</span>
                   </div>
-                  <span className="text-sm font-mono font-bold text-brand-400">
+                  <span className="text-sm font-mono font-bold text-gold-400">
                     ${item.price.toFixed(2)}
                   </span>
                 </div>
 
                 {/* Shopify Line-Item Properties */}
-                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 text-[11px] space-y-1">
-                  <span className="font-semibold text-slate-400 uppercase text-[9px] tracking-wider block mb-1">
-                    Custom Line-Item Properties (Shopify Payload)
+                <div className="bg-studio-950 p-3 rounded-xl border border-white/5 text-[11px] space-y-1.5 font-mono">
+                  <span className="font-bold text-gold-500 uppercase text-[9px] tracking-widest block mb-1">
+                    Shopify Line-Item Properties
                   </span>
                   {Object.entries(item.properties)
                     .filter(([k]) => !k.startsWith('_'))
                     .map(([propKey, propVal]) => (
                       <div key={propKey} className="flex justify-between">
-                        <span className="text-slate-400">{propKey}:</span>
-                        <span className="text-slate-200 font-medium truncate max-w-[190px]">
+                        <span className="text-studio-500">{propKey}:</span>
+                        <span className="text-slate-200 font-semibold truncate max-w-[190px]">
                           {propVal}
                         </span>
                       </div>
                     ))}
                   {item.properties['_config_id'] && (
-                    <div className="flex justify-between pt-1 border-t border-slate-800 font-mono text-[10px] text-brand-400">
+                    <div className="flex justify-between pt-1 border-t border-white/5 text-[10px] text-gold-400">
                       <span>Config Hash:</span>
                       <span>{item.properties['_config_id']}</span>
                     </div>
@@ -145,22 +149,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
 
         {/* Footer Checkout Actions */}
         {!checkoutCompleted && cart.length > 0 && (
-          <div className="p-4 border-t border-slate-800 bg-slate-900 space-y-3">
+          <div className="p-4 border-t border-white/10 bg-studio-950/70 space-y-3">
             <div className="space-y-1 text-xs text-slate-300">
               <div className="flex justify-between">
-                <span className="text-slate-400">Cart Subtotal:</span>
+                <span className="text-studio-500">Order Subtotal:</span>
                 <span className="font-mono text-white font-bold">${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-[11px] text-slate-400">
-                <span>Free 2-Day Rush Production:</span>
-                <span className="text-emerald-400 font-semibold">$0.00 (Promo)</span>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-studio-500">2-Day Rush Production:</span>
+                <span className="text-emerald-400 font-mono font-bold">Complimentary</span>
               </div>
             </div>
 
             <button
               onClick={handleMockCheckout}
               disabled={isCheckingOut}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-slate-950 font-black text-xs flex items-center justify-center space-x-2 transition-all shadow-lg shadow-brand-500/20 active:scale-98 disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-gold-500 to-amber-400 hover:from-gold-600 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center space-x-2 transition-all shadow-glow-gold active:scale-98 disabled:opacity-50 font-display"
             >
               {isCheckingOut ? (
                 <span>Connecting to Shopify Checkout...</span>

@@ -1,11 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
 import { TENT_MODELS, ZONES_METADATA, FRAME_TYPES } from '../../constants/tentData'
 import { textureSyncService } from '../../services/textureSyncService'
-import { RotateCcw, Maximize2, Minimize2, Eye, Compass, Loader2 } from 'lucide-react'
+import {
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  Compass,
+  Loader2,
+  Ruler,
+  Layers,
+  Sparkles,
+  Camera
+} from 'lucide-react'
+
+type CameraPreset = 'orbit' | 'front' | 'iso' | 'top' | 'eye'
 
 interface TentViewportProps {
   onCaptureSnapshotRef?: (captureFn: () => string) => void
@@ -18,18 +30,20 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const controlsRef = useRef<OrbitControls | null>(null)
   const modelGroupRef = useRef<THREE.Group | null>(null)
+  const dimensionsGroupRef = useRef<THREE.Group | null>(null)
   const fabricMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
   const metalMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
 
   const [isLoadingModel, setIsLoadingModel] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showDimensions, setShowDimensions] = useState(false)
+  const [activePreset, setActivePreset] = useState<CameraPreset>('orbit')
 
   const {
     config,
     activeZoneId,
     isAutoRotating,
-    toggleAutoRotate,
-    setActiveZoneId
+    toggleAutoRotate
   } = useConfiguratorStore()
 
   // Target camera position for smooth transition
@@ -46,11 +60,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
 
     // Scene
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color('#0f172a') // Slate 900
+    scene.background = new THREE.Color('#07090E') // Studio 950 deep charcoal
     sceneRef.current = scene
 
     // Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 50)
+    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 50)
     camera.position.set(0, 1.8, 3.8)
     cameraRef.current = camera
 
@@ -63,7 +77,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.15
+    renderer.toneMappingExposure = 1.2
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(renderer.domElement)
@@ -73,64 +87,91 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
     controls.dampingFactor = 0.05
-    controls.minDistance = 1.8
-    controls.maxDistance = 8.0
-    controls.maxPolarAngle = Math.PI / 2 + 0.05 // Don't go below ground
+    controls.minDistance = 1.6
+    controls.maxDistance = 8.5
+    controls.maxPolarAngle = Math.PI / 2 + 0.04
     controls.target.set(0, 1.3, 0)
     controlsRef.current = controls
 
-    // Lighting Setup
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9)
+    // Multi-tier Studio Lighting (Scrollcraft / Impeccable standard)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85)
     scene.add(ambientLight)
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 0.6)
-    hemiLight.position.set(0, 10, 0)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x181f30, 0.6)
+    hemiLight.position.set(0, 12, 0)
     scene.add(hemiLight)
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.5)
-    keyLight.position.set(4, 8, 5)
+    // Key Light with soft shadows
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.6)
+    keyLight.position.set(4.5, 9, 5)
     keyLight.castShadow = true
     keyLight.shadow.mapSize.width = 2048
     keyLight.shadow.mapSize.height = 2048
+    keyLight.shadow.camera.near = 0.5
+    keyLight.shadow.camera.far = 25
+    keyLight.shadow.camera.left = -4
+    keyLight.shadow.camera.right = 4
+    keyLight.shadow.camera.top = 4
+    keyLight.shadow.camera.bottom = -4
     keyLight.shadow.bias = -0.0001
     scene.add(keyLight)
 
-    const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.8)
-    fillLight.position.set(-5, 4, -4)
+    // Soft Cyan Fill Light
+    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.75)
+    fillLight.position.set(-5, 4.5, -4)
     scene.add(fillLight)
 
-    const rimLight = new THREE.DirectionalLight(0xffedd5, 0.6)
-    rimLight.position.set(0, 6, -6)
+    // Warm Amber Rim Light for edge separation
+    const rimLight = new THREE.DirectionalLight(0xfef3c7, 0.85)
+    rimLight.position.set(0, 7, -6)
     scene.add(rimLight)
 
-    // Circular Studio Ground Shadow
-    const shadowGeo = new THREE.PlaneGeometry(12, 12)
-    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.35 })
+    // Ground Studio Shadow Floor
+    const shadowGeo = new THREE.PlaneGeometry(14, 14)
+    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.45 })
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
     shadowMesh.rotation.x = -Math.PI / 2
     shadowMesh.position.y = -0.01
     shadowMesh.receiveShadow = true
     scene.add(shadowMesh)
 
-    // Subtle grid pattern
-    const grid = new THREE.GridHelper(10, 20, 0x334155, 0x1e293b)
+    // Concentric Studio Floor Rings
+    const ringGeo = new THREE.RingGeometry(1.6, 1.62, 64)
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x25304b, side: THREE.DoubleSide })
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat)
+    ringMesh.rotation.x = -Math.PI / 2
+    ringMesh.position.y = 0.001
+    scene.add(ringMesh)
+
+    const ringOuterGeo = new THREE.RingGeometry(2.8, 2.815, 64)
+    const ringOuterMesh = new THREE.Mesh(ringOuterGeo, ringMat)
+    ringOuterMesh.rotation.x = -Math.PI / 2
+    ringOuterMesh.position.y = 0.001
+    scene.add(ringOuterMesh)
+
+    // Subtle Grid Helper
+    const grid = new THREE.GridHelper(12, 24, 0x25304b, 0x121724)
     grid.position.y = 0
     scene.add(grid)
 
-    // Model root group
+    // Groups
     const modelGroup = new THREE.Group()
     scene.add(modelGroup)
     modelGroupRef.current = modelGroup
+
+    const dimensionsGroup = new THREE.Group()
+    scene.add(dimensionsGroup)
+    dimensionsGroupRef.current = dimensionsGroup
 
     // Animation Loop
     let animationFrameId: number
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate)
 
-      // Smooth camera position interpolation
+      // Smooth camera interpolation
       if (cameraRef.current && controlsRef.current) {
-        cameraRef.current.position.lerp(targetCameraPosRef.current, 0.05)
-        controlsRef.current.target.lerp(targetLookAtRef.current, 0.05)
+        cameraRef.current.position.lerp(targetCameraPosRef.current, 0.06)
+        controlsRef.current.target.lerp(targetLookAtRef.current, 0.06)
         controlsRef.current.update()
       }
 
@@ -151,7 +192,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
     window.addEventListener('resize', handleResize)
 
-    // Expose snapshot capture function
+    // Expose snapshot capture
     if (onCaptureSnapshotRef) {
       onCaptureSnapshotRef(() => {
         if (!rendererRef.current) return ''
@@ -169,14 +210,13 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [])
 
-  // 2. Load 3D Model when modelId changes
+  // 2. Load 3D Model
   useEffect(() => {
     if (!sceneRef.current || !modelGroupRef.current) return
 
     const modelGroup = modelGroupRef.current
     setIsLoadingModel(true)
 
-    // Clear previous model children
     while (modelGroup.children.length > 0) {
       modelGroup.remove(modelGroup.children[0])
     }
@@ -188,29 +228,24 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
       modelMeta.glbPath,
       (gltf) => {
         const root = gltf.scene
-
-        // Apply scaling
         root.scale.set(modelMeta.scale[0], modelMeta.scale[1], modelMeta.scale[2])
 
-        // Traverse meshes to configure materials & shadows
         root.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh
             mesh.castShadow = true
             mesh.receiveShadow = true
 
-            // If multi-material or single
             const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
 
             materials.forEach((mat, idx) => {
               if (mat.name === 'fabric_Mat' || mesh.name === 'Mesh.003' || mesh.name === 'Mesh') {
-                // Configure high-res canvas texture
                 const canvasTex = textureSyncService.getTexture()
 
                 const newFabricMat = new THREE.MeshStandardMaterial({
                   map: canvasTex,
-                  roughness: 0.7,
-                  metalness: 0.05,
+                  roughness: 0.68,
+                  metalness: 0.04,
                   bumpScale: 0.02,
                   side: THREE.DoubleSide
                 })
@@ -222,12 +257,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
                 }
                 fabricMaterialRef.current = newFabricMat
               } else if (mat.name === 'Metal_mat') {
-                // Configure hardware frame material
                 const isAluminum = config.frameType === 'heavy_duty_aluminum'
                 const metalMat = new THREE.MeshStandardMaterial({
-                  color: isAluminum ? 0xd1d5db : 0xf1f5f9,
-                  metalness: isAluminum ? 0.9 : 0.4,
-                  roughness: isAluminum ? 0.25 : 0.35
+                  color: isAluminum ? 0xd1d5db : 0xf8fafc,
+                  metalness: isAluminum ? 0.92 : 0.45,
+                  roughness: isAluminum ? 0.22 : 0.32
                 })
 
                 if (Array.isArray(mesh.material)) {
@@ -252,18 +286,18 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     )
   }, [config.modelId])
 
-  // 3. Update Hardware Material when frameType changes
+  // 3. Update Hardware Frame Material
   useEffect(() => {
     if (metalMaterialRef.current) {
       const isAluminum = config.frameType === 'heavy_duty_aluminum'
-      metalMaterialRef.current.color.set(isAluminum ? 0xd1d5db : 0xf1f5f9)
-      metalMaterialRef.current.metalness = isAluminum ? 0.9 : 0.4
-      metalMaterialRef.current.roughness = isAluminum ? 0.25 : 0.35
+      metalMaterialRef.current.color.set(isAluminum ? 0xd1d5db : 0xf8fafc)
+      metalMaterialRef.current.metalness = isAluminum ? 0.92 : 0.45
+      metalMaterialRef.current.roughness = isAluminum ? 0.22 : 0.32
       metalMaterialRef.current.needsUpdate = true
     }
   }, [config.frameType])
 
-  // 4. Update Controls Auto-Rotate
+  // 4. Update Auto-Rotation
   useEffect(() => {
     if (controlsRef.current) {
       controlsRef.current.autoRotate = isAutoRotating
@@ -271,14 +305,12 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [isAutoRotating])
 
-  // 5. Smoothly animate camera when active zone changes
+  // 5. Zone Focus Animation
   useEffect(() => {
     const meta = ZONES_METADATA[activeZoneId]
     if (!meta) return
 
     const { azimuth, polar, distance } = meta.cameraAngle
-
-    // Calculate spherical camera coordinates
     const targetY = 1.3
     const x = distance * Math.sin(azimuth) * Math.sin(polar)
     const y = targetY + distance * Math.cos(polar)
@@ -286,11 +318,38 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
 
     targetCameraPosRef.current.set(x, y, z)
     targetLookAtRef.current.set(0, targetY, 0)
+    setActivePreset('orbit')
   }, [activeZoneId])
 
-  const handleResetCamera = () => {
-    targetCameraPosRef.current.set(0, 1.8, 3.8)
-    targetLookAtRef.current.set(0, 1.3, 0)
+  // Camera Presets handler
+  const setCameraPreset = (preset: CameraPreset) => {
+    setActivePreset(preset)
+    const targetY = 1.3
+
+    switch (preset) {
+      case 'front':
+        targetCameraPosRef.current.set(0, targetY + 0.1, 3.4)
+        targetLookAtRef.current.set(0, targetY, 0)
+        break
+      case 'iso':
+        targetCameraPosRef.current.set(2.8, 2.2, 2.8)
+        targetLookAtRef.current.set(0, targetY, 0)
+        break
+      case 'top':
+        targetCameraPosRef.current.set(0.01, 4.5, 0)
+        targetLookAtRef.current.set(0, 0, 0)
+        break
+      case 'eye':
+        // Eye level looking up at canopy
+        targetCameraPosRef.current.set(0, 0.7, 2.2)
+        targetLookAtRef.current.set(0, 1.8, 0)
+        break
+      case 'orbit':
+      default:
+        targetCameraPosRef.current.set(0, 1.8, 3.8)
+        targetLookAtRef.current.set(0, targetY, 0)
+        break
+    }
   }
 
   const toggleFullscreen = () => {
@@ -304,48 +363,106 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }
 
+  const modelMeta = TENT_MODELS[config.modelId]
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[420px] bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden"
+      className="relative w-full h-full min-h-[440px] bg-gradient-to-b from-studio-950 via-studio-900 to-studio-950 overflow-hidden select-none"
     >
       {/* Loading Overlay */}
       {isLoadingModel && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm">
-          <Loader2 className="w-10 h-10 text-brand-500 animate-spin mb-3" />
-          <p className="text-sm font-medium text-slate-300">Loading 3D Canopy Tent Model...</p>
-          <span className="text-xs text-slate-500 mt-1">{TENT_MODELS[config.modelId].name}</span>
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-studio-950/85 backdrop-blur-md">
+          <div className="w-12 h-12 rounded-2xl bg-studio-850 border border-studio-700/80 flex items-center justify-center shadow-glow-gold mb-3">
+            <Loader2 className="w-6 h-6 text-gold-500 animate-spin" />
+          </div>
+          <p className="text-xs uppercase tracking-widest font-bold text-white">Loading 3D Studio Model</p>
+          <span className="text-[11px] text-studio-500 mt-1">{modelMeta.name}</span>
         </div>
       )}
 
-      {/* Top Floating Controls */}
-      <div className="absolute top-4 left-4 z-10 flex items-center space-x-2">
-        <div className="px-3 py-1.5 rounded-full bg-slate-800/90 backdrop-blur border border-slate-700/80 shadow-lg flex items-center space-x-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-semibold text-slate-200">
-            {ZONES_METADATA[activeZoneId]?.label || '3D Orbit View'}
+      {/* Top Left: Active Zone & Live Telemetry Pill */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col space-y-1.5">
+        <div className="px-3 py-1.5 rounded-xl bg-studio-900/90 backdrop-blur-md border border-white/10 shadow-studio-card flex items-center space-x-2.5">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="text-xs font-bold text-slate-100 font-display">
+            {ZONES_METADATA[activeZoneId]?.label || '3D Viewport'}
+          </span>
+        </div>
+
+        {/* Footprint badge */}
+        <div className="px-2.5 py-1 rounded-lg bg-studio-850/80 backdrop-blur border border-white/5 w-fit">
+          <span className="text-[10px] font-mono text-studio-500">
+            {modelMeta.dimensions} • 600D Poly
           </span>
         </div>
       </div>
 
-      {/* Floating Action Buttons */}
+      {/* Top Right: Camera Presets Selector (Scrollcraft / Architectural Studio) */}
+      <div className="absolute top-4 right-4 z-10 hidden sm:flex items-center bg-studio-900/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-studio-card">
+        <button
+          onClick={() => setCameraPreset('orbit')}
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            activePreset === 'orbit' ? 'bg-gold-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Orbit
+        </button>
+        <button
+          onClick={() => setCameraPreset('front')}
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            activePreset === 'front' ? 'bg-gold-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Elevation
+        </button>
+        <button
+          onClick={() => setCameraPreset('iso')}
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            activePreset === 'iso' ? 'bg-gold-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Isometric
+        </button>
+        <button
+          onClick={() => setCameraPreset('eye')}
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            activePreset === 'eye' ? 'bg-gold-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Eye-Level
+        </button>
+        <button
+          onClick={() => setCameraPreset('top')}
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            activePreset === 'top' ? 'bg-gold-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          Top Plan
+        </button>
+      </div>
+
+      {/* Floating Viewport Actions Bottom Right */}
       <div className="absolute bottom-4 right-4 z-10 flex items-center space-x-2">
         <button
           onClick={toggleAutoRotate}
-          title="Toggle 360° Auto-Rotation"
-          className={`p-2.5 rounded-xl border backdrop-blur transition-all shadow-md ${
+          title="Toggle 360° Studio Turntable"
+          className={`p-2.5 rounded-xl border backdrop-blur-md transition-all shadow-studio-card ${
             isAutoRotating
-              ? 'bg-brand-500 text-white border-brand-400'
-              : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-700 hover:text-white'
+              ? 'bg-gold-500 text-slate-950 border-gold-400 shadow-glow-gold font-bold'
+              : 'bg-studio-850/80 text-slate-300 border-white/10 hover:bg-studio-800 hover:text-white'
           }`}
         >
           <Compass className={`w-4 h-4 ${isAutoRotating ? 'animate-spin' : ''}`} />
         </button>
 
         <button
-          onClick={handleResetCamera}
+          onClick={() => setCameraPreset('orbit')}
           title="Reset Camera View"
-          className="p-2.5 rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/80 backdrop-blur hover:bg-slate-700 hover:text-white transition-all shadow-md"
+          className="p-2.5 rounded-xl bg-studio-850/80 text-slate-300 border border-white/10 backdrop-blur-md hover:bg-studio-800 hover:text-white transition-all shadow-studio-card"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -353,16 +470,19 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         <button
           onClick={toggleFullscreen}
           title="Toggle Fullscreen"
-          className="p-2.5 rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/80 backdrop-blur hover:bg-slate-700 hover:text-white transition-all shadow-md"
+          className="p-2.5 rounded-xl bg-studio-850/80 text-slate-300 border border-white/10 backdrop-blur-md hover:bg-studio-800 hover:text-white transition-all shadow-studio-card"
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Orbit Tip Pill */}
-      <div className="absolute bottom-4 left-4 z-10 pointer-events-none">
-        <span className="text-[11px] text-slate-400 bg-slate-900/70 px-2.5 py-1 rounded-md border border-slate-800 backdrop-blur">
-          Drag to Orbit • Scroll to Zoom • Right-click to Pan
+      {/* Subtle Studio Lighting Vignette */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-transparent to-studio-950/60" />
+
+      {/* Bottom Left Interaction Legend */}
+      <div className="absolute bottom-4 left-4 z-10 pointer-events-none hidden sm:block">
+        <span className="text-[10px] tracking-wide font-mono text-studio-500 bg-studio-900/80 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
+          L-Click: Orbit • Scroll: Zoom • R-Click: Pan
         </span>
       </div>
     </div>

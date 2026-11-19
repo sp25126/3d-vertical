@@ -15,7 +15,8 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  Receipt
+  Receipt,
+  Sparkles
 } from 'lucide-react'
 
 export const OptionsDrawer: React.FC = () => {
@@ -28,7 +29,6 @@ export const OptionsDrawer: React.FC = () => {
     toggleAccessory
   } = useConfiguratorStore()
 
-  // Collapsible section states
   const [openSection, setOpenSection] = useState<'size' | 'frame' | 'color' | 'accessories' | 'pricing'>('color')
 
   const toggleSection = (section: 'size' | 'frame' | 'color' | 'accessories' | 'pricing') => {
@@ -36,22 +36,24 @@ export const OptionsDrawer: React.FC = () => {
   }
 
   return (
-    <div className="bg-slate-900 border-t border-slate-800 text-slate-200 overflow-y-auto max-h-[380px]">
-      {/* 1. Size & Dimensions */}
-      <div className="border-b border-slate-800">
+    <div className="bg-studio-900 border-t border-white/10 text-slate-200 overflow-y-auto max-h-[380px]">
+      {/* 1. Size & Footprint */}
+      <div className="border-b border-white/5">
         <button
           onClick={() => toggleSection('size')}
-          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors"
+          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-studio-850/60 transition-colors"
         >
-          <div className="flex items-center space-x-2">
-            <Maximize2 className="w-4 h-4 text-brand-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white">1. Canopy Footprint</span>
+          <div className="flex items-center space-x-2.5">
+            <Maximize2 className="w-4 h-4 text-gold-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-white font-display">
+              1. Footprint & Model
+            </span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-semibold text-brand-300">
+            <span className="text-xs font-bold text-gold-400 font-display">
               {TENT_MODELS[config.modelId].name}
             </span>
-            {openSection === 'size' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {openSection === 'size' ? <ChevronUp className="w-4 h-4 text-studio-500" /> : <ChevronDown className="w-4 h-4 text-studio-500" />}
           </div>
         </button>
 
@@ -66,15 +68,15 @@ export const OptionsDrawer: React.FC = () => {
                   onClick={() => setModelId(mId)}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     isSelected
-                      ? 'border-brand-500 bg-brand-500/10 shadow-sm'
-                      : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
+                      ? 'border-gold-500 bg-gold-500/10 shadow-glow-gold'
+                      : 'border-white/5 bg-studio-850/60 hover:bg-studio-850 hover:border-white/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white">{model.name}</span>
-                    <span className="text-xs font-mono font-bold text-brand-400">${model.basePrice}</span>
+                    <span className="text-xs font-bold text-white font-display">{model.name}</span>
+                    <span className="text-xs font-mono font-bold text-gold-400">${model.basePrice}</span>
                   </div>
-                  <span className="text-[11px] text-slate-400 block mt-0.5">{model.dimensions}</span>
+                  <span className="text-[11px] text-studio-500 block mt-0.5">{model.dimensions}</span>
                 </button>
               )
             })}
@@ -83,20 +85,22 @@ export const OptionsDrawer: React.FC = () => {
       </div>
 
       {/* 2. Hardware Frame */}
-      <div className="border-b border-slate-800">
+      <div className="border-b border-white/5">
         <button
           onClick={() => toggleSection('frame')}
-          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors"
+          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-studio-850/60 transition-colors"
         >
-          <div className="flex items-center space-x-2">
-            <Shield className="w-4 h-4 text-brand-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white">2. Frame Hardware</span>
+          <div className="flex items-center space-x-2.5">
+            <Shield className="w-4 h-4 text-gold-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-white font-display">
+              2. Frame Engineering
+            </span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-semibold text-brand-300">
+            <span className="text-xs font-bold text-gold-400 font-display">
               {FRAME_TYPES[config.frameType].name}
             </span>
-            {openSection === 'frame' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {openSection === 'frame' ? <ChevronUp className="w-4 h-4 text-studio-500" /> : <ChevronDown className="w-4 h-4 text-studio-500" />}
           </div>
         </button>
 
@@ -111,22 +115,22 @@ export const OptionsDrawer: React.FC = () => {
                   onClick={() => setFrameType(fKey)}
                   className={`w-full p-3 rounded-xl border text-left flex items-start justify-between transition-all ${
                     isSelected
-                      ? 'border-brand-500 bg-brand-500/10 shadow-sm'
-                      : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
+                      ? 'border-gold-500 bg-gold-500/10 shadow-glow-gold'
+                      : 'border-white/5 bg-studio-850/60 hover:bg-studio-850 hover:border-white/10'
                   }`}
                 >
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-white">{frame.name}</span>
+                      <span className="text-xs font-bold text-white font-display">{frame.name}</span>
                       {frame.priceDelta > 0 && (
-                        <span className="text-[10px] bg-brand-500/20 text-brand-300 px-1.5 py-0.5 rounded font-mono">
+                        <span className="text-[9px] bg-gold-500/20 text-gold-300 px-1.5 py-0.5 rounded font-mono font-bold">
                           +${frame.priceDelta}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1">{frame.desc}</p>
+                    <p className="text-[11px] text-studio-500 mt-1">{frame.desc}</p>
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-brand-400 shrink-0 ml-2 mt-0.5" />}
+                  {isSelected && <Check className="w-4 h-4 text-gold-400 shrink-0 ml-2 mt-0.5" />}
                 </button>
               )
             })}
@@ -134,22 +138,24 @@ export const OptionsDrawer: React.FC = () => {
         )}
       </div>
 
-      {/* 3. Fabric Base Color */}
-      <div className="border-b border-slate-800">
+      {/* 3. Fabric Dye Base Color */}
+      <div className="border-b border-white/5">
         <button
           onClick={() => toggleSection('color')}
-          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors"
+          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-studio-850/60 transition-colors"
         >
-          <div className="flex items-center space-x-2">
-            <Palette className="w-4 h-4 text-brand-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white">3. Canopy Base Dye Color</span>
+          <div className="flex items-center space-x-2.5">
+            <Palette className="w-4 h-4 text-gold-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-white font-display">
+              3. Fabric Dye Color
+            </span>
           </div>
           <div className="flex items-center space-x-2">
             <div
-              className="w-4 h-4 rounded-full border border-slate-600 shadow-inner"
+              className="w-4 h-4 rounded-full border border-white/20 shadow-inner"
               style={{ backgroundColor: config.fabricBaseColor }}
             />
-            {openSection === 'color' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {openSection === 'color' ? <ChevronUp className="w-4 h-4 text-studio-500" /> : <ChevronDown className="w-4 h-4 text-studio-500" />}
           </div>
         </button>
 
@@ -165,8 +171,8 @@ export const OptionsDrawer: React.FC = () => {
                     title={c.name}
                     className={`h-9 rounded-xl border flex items-center justify-center transition-all ${
                       isSelected
-                        ? 'border-white scale-105 shadow-md ring-2 ring-brand-500'
-                        : 'border-slate-700/80 hover:scale-105'
+                        ? 'border-white scale-105 shadow-glow-gold ring-2 ring-gold-500'
+                        : 'border-white/10 hover:scale-105'
                     }`}
                     style={{ backgroundColor: c.hex }}
                   >
@@ -177,16 +183,16 @@ export const OptionsDrawer: React.FC = () => {
             </div>
 
             {/* Custom Hex Color Picker */}
-            <div className="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-              <span className="text-xs text-slate-300">Custom Pantone / Hex Dye:</span>
+            <div className="flex items-center justify-between bg-studio-850 p-2.5 rounded-xl border border-white/10">
+              <span className="text-xs text-slate-300">Pantone / Hex Dye:</span>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
                   value={config.fabricBaseColor}
                   onChange={(e) => setFabricBaseColor(e.target.value)}
-                  className="w-8 h-8 rounded border border-slate-600 cursor-pointer bg-transparent"
+                  className="w-8 h-8 rounded border border-white/10 cursor-pointer bg-transparent"
                 />
-                <span className="font-mono text-xs uppercase text-brand-300 font-bold">
+                <span className="font-mono text-xs uppercase text-gold-400 font-bold">
                   {config.fabricBaseColor}
                 </span>
               </div>
@@ -196,20 +202,22 @@ export const OptionsDrawer: React.FC = () => {
       </div>
 
       {/* 4. Accessories */}
-      <div className="border-b border-slate-800">
+      <div className="border-b border-white/5">
         <button
           onClick={() => toggleSection('accessories')}
-          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors"
+          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-studio-850/60 transition-colors"
         >
-          <div className="flex items-center space-x-2">
-            <PackagePlus className="w-4 h-4 text-brand-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white">4. Hardware Accessories</span>
+          <div className="flex items-center space-x-2.5">
+            <PackagePlus className="w-4 h-4 text-gold-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-white font-display">
+              4. Hardware Accessories
+            </span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-semibold text-brand-300">
+            <span className="text-xs font-bold text-gold-400 font-display">
               {config.accessories.length} Selected
             </span>
-            {openSection === 'accessories' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {openSection === 'accessories' ? <ChevronUp className="w-4 h-4 text-studio-500" /> : <ChevronDown className="w-4 h-4 text-studio-500" />}
           </div>
         </button>
 
@@ -223,19 +231,19 @@ export const OptionsDrawer: React.FC = () => {
                   onClick={() => toggleAccessory(acc.id)}
                   className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
                     isSelected
-                      ? 'border-brand-500 bg-brand-500/10 shadow-sm'
-                      : 'border-slate-800 bg-slate-800/40 hover:bg-slate-800'
+                      ? 'border-gold-500 bg-gold-500/10 shadow-glow-gold'
+                      : 'border-white/5 bg-studio-850/60 hover:bg-studio-850 hover:border-white/10'
                   }`}
                 >
                   <div className="pr-3">
-                    <span className="text-xs font-bold text-white block">{acc.name}</span>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">{acc.description}</span>
+                    <span className="text-xs font-bold text-white block font-display">{acc.name}</span>
+                    <span className="text-[11px] text-studio-500 block mt-0.5">{acc.description}</span>
                   </div>
                   <div className="flex items-center space-x-2 shrink-0">
-                    <span className="text-xs font-mono font-bold text-brand-400">+${acc.price}</span>
+                    <span className="text-xs font-mono font-bold text-gold-400">+${acc.price}</span>
                     <div
                       className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                        isSelected ? 'bg-brand-500 border-brand-400 text-white' : 'border-slate-700 bg-slate-800'
+                        isSelected ? 'bg-gold-500 border-gold-400 text-slate-950 font-black' : 'border-white/10 bg-studio-950'
                       }`}
                     >
                       {isSelected && <Check className="w-3.5 h-3.5" />}
@@ -252,51 +260,53 @@ export const OptionsDrawer: React.FC = () => {
       <div>
         <button
           onClick={() => toggleSection('pricing')}
-          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors"
+          className="w-full p-3.5 flex items-center justify-between text-left hover:bg-studio-850/60 transition-colors"
         >
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2.5">
             <Receipt className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white">5. Dynamic Pricing Breakdown</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-white font-display">
+              5. Dynamic Quote Breakdown
+            </span>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-mono font-bold text-emerald-400">
               ${pricing.finalTotal.toFixed(2)}
             </span>
-            {openSection === 'pricing' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {openSection === 'pricing' ? <ChevronUp className="w-4 h-4 text-studio-500" /> : <ChevronDown className="w-4 h-4 text-studio-500" />}
           </div>
         </button>
 
         {openSection === 'pricing' && (
           <div className="p-3.5 pt-0 space-y-1.5 text-xs text-slate-300">
             <div className="flex justify-between">
-              <span className="text-slate-400">Base Canopy & Frame:</span>
-              <span className="font-mono">${pricing.basePrice.toFixed(2)}</span>
+              <span className="text-studio-500">Base Canopy & Frame:</span>
+              <span className="font-mono text-white">${pricing.basePrice.toFixed(2)}</span>
             </div>
             {pricing.frameUpgradeCost > 0 && (
               <div className="flex justify-between">
-                <span className="text-slate-400">Aluminum Frame Upgrade:</span>
-                <span className="font-mono">+${pricing.frameUpgradeCost.toFixed(2)}</span>
+                <span className="text-studio-500">Aluminum Frame Upgrade:</span>
+                <span className="font-mono text-gold-400">+${pricing.frameUpgradeCost.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-slate-400">
+              <span className="text-studio-500">
                 Printed Zones ({pricing.customizedZonesCount} locations):
               </span>
-              <span className="font-mono">+${pricing.printTotal.toFixed(2)}</span>
+              <span className="font-mono text-gold-400">+${pricing.printTotal.toFixed(2)}</span>
             </div>
             {pricing.accessoriesTotal > 0 && (
               <div className="flex justify-between">
-                <span className="text-slate-400">Accessories Total:</span>
-                <span className="font-mono">+${pricing.accessoriesTotal.toFixed(2)}</span>
+                <span className="text-studio-500">Hardware Accessories:</span>
+                <span className="font-mono text-gold-400">+${pricing.accessoriesTotal.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between pt-1 border-t border-slate-800">
-              <span className="text-slate-400">Estimated Sales Tax (8%):</span>
-              <span className="font-mono">${pricing.estimatedTax.toFixed(2)}</span>
+            <div className="flex justify-between pt-1 border-t border-white/5">
+              <span className="text-studio-500">Estimated Sales Tax (8%):</span>
+              <span className="font-mono text-white">${pricing.estimatedTax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between pt-1 border-t border-slate-700 font-bold text-white text-sm">
-              <span>Final Total:</span>
-              <span className="text-brand-400 font-mono">${pricing.finalTotal.toFixed(2)}</span>
+            <div className="flex justify-between pt-1.5 border-t border-white/10 font-bold text-white text-sm">
+              <span className="font-display">Total Investment:</span>
+              <span className="text-gold-400 font-mono text-base font-black">${pricing.finalTotal.toFixed(2)}</span>
             </div>
           </div>
         )}

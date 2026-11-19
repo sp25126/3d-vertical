@@ -7,16 +7,20 @@ import {
   Type,
   Image as ImageIcon,
   Trash2,
-  Move,
-  RotateCw,
-  Maximize,
   AlignHorizontalJustifyCenter,
   AlignVerticalJustifyCenter,
   Sparkles,
-  Info
+  Info,
+  Copy,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Sliders,
+  Maximize2
 } from 'lucide-react'
 
-// Built-in vector SVG logos for one-click testing
+// Built-in vector SVG logos for instant evaluation
 const PRESET_LOGOS = [
   {
     name: 'Summit Athletics',
@@ -28,7 +32,7 @@ const PRESET_LOGOS = [
   },
   {
     name: 'Craft Falcon',
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="%23F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="%23F6AF2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
   }
 ]
 
@@ -57,15 +61,17 @@ export const ZoneEditor2D: React.FC = () => {
   const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].family)
   const [fontSize, setFontSize] = useState(48)
   const [textColor, setTextColor] = useState('#FFFFFF')
+  const [strokeColor, setStrokeColor] = useState('#000000')
+  const [strokeWidth, setStrokeWidth] = useState(0)
+  const [letterSpacing, setLetterSpacing] = useState(0)
   const [isBold, setIsBold] = useState(true)
 
   // Dragging / transformation interaction state
   const isDraggingRef = useRef(false)
-  const dragHandleRef = useRef<'move' | 'scale' | 'rotate' | null>(null)
   const dragStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const initialElementStateRef = useRef<CustomElement | null>(null)
+  const [isSnappingCenter, setIsSnappingCenter] = useState(false)
 
-  // Determine canvas aspect ratio based on Peak (triangular/trapezoid) vs Valance (horizontal strip)
   const isPeak = zoneMeta.group === 'peak'
   const canvasWidth = 800
   const canvasHeight = isPeak ? 600 : 220
@@ -84,23 +90,29 @@ export const ZoneEditor2D: React.FC = () => {
       ctx.fillStyle = zoneData.backgroundColor || config.fabricBaseColor
       ctx.fillRect(0, 0, w, h)
 
-      // Draw Safety / Bleed guides
+      // Draw Sublimation Safety / Bleed guides
       ctx.save()
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)'
       ctx.setLineDash([6, 6])
       ctx.lineWidth = 2
 
       if (isPeak) {
         // Triangular roof peak guide
         ctx.beginPath()
-        ctx.moveTo(w / 2, 24)
-        ctx.lineTo(w - 24, h - 24)
-        ctx.lineTo(24, h - 24)
+        ctx.moveTo(w / 2, 28)
+        ctx.lineTo(w - 28, h - 28)
+        ctx.lineTo(28, h - 28)
         ctx.closePath()
         ctx.stroke()
+
+        // Corner crop marks
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+        ctx.setLineDash([])
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(w / 2 - 8, 20, 16, 16)
       } else {
         // Valance drop banner rect guide
-        ctx.strokeRect(20, 16, w - 40, h - 32)
+        ctx.strokeRect(24, 18, w - 48, h - 36)
       }
       ctx.restore()
 
@@ -120,8 +132,20 @@ export const ZoneEditor2D: React.FC = () => {
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
 
-          // Optional subtle text shadow for high contrast legibility
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
+          // Optional letter-spacing
+          if (el.letterSpacing && 'letterSpacing' in ctx) {
+            ;(ctx as any).letterSpacing = `${el.letterSpacing}px`
+          }
+
+          // Optional outline stroke
+          if (el.strokeWidth && el.strokeWidth > 0) {
+            ctx.strokeStyle = el.strokeColor || '#000000'
+            ctx.lineWidth = el.strokeWidth
+            ctx.strokeText(el.text, 0, 0)
+          }
+
+          // Soft ambient drop-shadow
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
           ctx.shadowBlur = 4
           ctx.shadowOffsetX = 1
           ctx.shadowOffsetY = 2
@@ -146,7 +170,7 @@ export const ZoneEditor2D: React.FC = () => {
           }
         }
 
-        // Draw Selection Bounding Box if selected
+        // Bounding Box on Selection
         if (el.id === selectedElementId) {
           ctx.restore()
           ctx.save()
@@ -162,16 +186,16 @@ export const ZoneEditor2D: React.FC = () => {
             boxH = (el.fontSize + 16) * el.scale
           }
 
-          ctx.strokeStyle = '#0284C7' // Accent blue
+          ctx.strokeStyle = '#F6AF2D' // MVP Gold
           ctx.lineWidth = 2
           ctx.setLineDash([4, 4])
           ctx.strokeRect(-boxW / 2, -boxH / 2, boxW, boxH)
 
-          // Handles: Scale corner handle
-          ctx.fillStyle = '#0284C7'
+          // Handles: Scale corner
+          ctx.fillStyle = '#F6AF2D'
           ctx.fillRect(boxW / 2 - 5, boxH / 2 - 5, 10, 10)
 
-          // Handles: Rotation top handle
+          // Handles: Rotation top
           ctx.beginPath()
           ctx.arc(0, -boxH / 2 - 14, 5, 0, Math.PI * 2)
           ctx.fill()
@@ -183,13 +207,25 @@ export const ZoneEditor2D: React.FC = () => {
 
         ctx.restore()
       })
+
+      // If actively snapping to center, draw subtle center snap crosshairs
+      if (isDraggingRef.current && isSnappingCenter) {
+        ctx.save()
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)'
+        ctx.lineWidth = 1.5
+        ctx.setLineDash([4, 4])
+        ctx.beginPath()
+        ctx.moveTo(w / 2, 0)
+        ctx.lineTo(w / 2, h)
+        ctx.stroke()
+        ctx.restore()
+      }
     },
-    [config.fabricBaseColor, isPeak, selectedElementId]
+    [config.fabricBaseColor, isPeak, selectedElementId, isSnappingCenter]
   )
 
-  // 2. Synchronize all zone canvases into master 3D texture
+  // 2. Synchronize all zone canvases
   useEffect(() => {
-    // Ensure canvas for each zone exists in cache
     Object.keys(config.zones).forEach((zk) => {
       const zoneId = zk as import('../../types/configurator').ZoneId
       if (!zoneCanvasesCacheRef.current[zoneId]) {
@@ -203,16 +239,14 @@ export const ZoneEditor2D: React.FC = () => {
       renderZoneToCanvas(c, config.zones[zoneId])
     })
 
-    // Also update current visible editor canvas
     if (canvasRef.current) {
       renderZoneToCanvas(canvasRef.current, currentZone)
     }
 
-    // Pipe to 3D Three.js master texture
     textureSyncService.updateMasterTexture(config, zoneCanvasesCacheRef.current)
   }, [config, activeZoneId, selectedElementId, renderZoneToCanvas])
 
-  // 3. Pointer event handlers for moving, scaling, rotating elements
+  // 3. Pointer event handlers
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -223,9 +257,7 @@ export const ZoneEditor2D: React.FC = () => {
     const clickX = (e.clientX - rect.left) * scaleX
     const clickY = (e.clientY - rect.top) * scaleY
 
-    // Check hit test against elements in reverse order (topmost first)
     let hitEl: CustomElement | null = null
-    let handle: 'move' | 'scale' | 'rotate' = 'move'
 
     for (let i = currentZone.elements.length - 1; i >= 0; i--) {
       const el = currentZone.elements[i]
@@ -242,7 +274,6 @@ export const ZoneEditor2D: React.FC = () => {
     if (hitEl) {
       setSelectedElementId(hitEl.id)
       isDraggingRef.current = true
-      dragHandleRef.current = handle
       dragStartPosRef.current = { x: clickX, y: clickY }
       initialElementStateRef.current = { ...hitEl }
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
@@ -265,18 +296,28 @@ export const ZoneEditor2D: React.FC = () => {
     const deltaY = currentY - dragStartPosRef.current.y
 
     const initial = initialElementStateRef.current
-    const newPercentX = Math.max(5, Math.min(95, initial.x + (deltaX / canvas.width) * 100))
-    const newPercentY = Math.max(5, Math.min(95, initial.y + (deltaY / canvas.height) * 100))
+    let newPercentX = initial.x + (deltaX / canvas.width) * 100
+    let newPercentY = initial.y + (deltaY / canvas.height) * 100
+
+    // Magnetic center snap
+    const snapsToCenter = Math.abs(newPercentX - 50) < 2.5
+    if (snapsToCenter) {
+      newPercentX = 50
+    }
+    setIsSnappingCenter(snapsToCenter)
+
+    newPercentX = Math.max(5, Math.min(95, newPercentX))
+    newPercentY = Math.max(5, Math.min(95, newPercentY))
 
     updateElement(activeZoneId, selectedElementId, {
-      x: Math.round(newPercentX),
-      y: Math.round(newPercentY)
+      x: Math.round(newPercentX * 10) / 10,
+      y: Math.round(newPercentY * 10) / 10
     })
   }
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     isDraggingRef.current = false
-    dragHandleRef.current = null
+    setIsSnappingCenter(false)
     initialElementStateRef.current = null
     try {
       ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
@@ -293,6 +334,9 @@ export const ZoneEditor2D: React.FC = () => {
       fontSize,
       color: textColor,
       fontWeight: isBold ? 700 : 400,
+      strokeColor: strokeWidth > 0 ? strokeColor : undefined,
+      strokeWidth: strokeWidth > 0 ? strokeWidth : undefined,
+      letterSpacing: letterSpacing !== 0 ? letterSpacing : undefined,
       x: 50,
       y: isPeak ? 60 : 50,
       rotation: 0,
@@ -330,37 +374,59 @@ export const ZoneEditor2D: React.FC = () => {
     e.target.value = ''
   }
 
-  // Selected element for inspector controls
+  // Duplicate Selected Element
+  const handleDuplicate = () => {
+    if (!selectedElement) return
+    if (selectedElement.type === 'text') {
+      const { id, ...rest } = selectedElement
+      addElement(activeZoneId, { ...rest, x: Math.min(90, rest.x + 4), y: Math.min(90, rest.y + 4) })
+    } else {
+      const { id, ...rest } = selectedElement
+      addElement(activeZoneId, { ...rest, x: Math.min(90, rest.x + 4), y: Math.min(90, rest.y + 4) })
+    }
+  }
+
+  // Nudge controls
+  const handleNudge = (dx: number, dy: number) => {
+    if (!selectedElement) return
+    updateElement(activeZoneId, selectedElement.id, {
+      x: Math.max(5, Math.min(95, selectedElement.x + dx)),
+      y: Math.max(5, Math.min(95, selectedElement.y + dy))
+    })
+  }
+
   const selectedElement = currentZone.elements.find((el) => el.id === selectedElementId)
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border-l border-slate-800 text-slate-200">
+    <div className="flex flex-col h-full bg-studio-900 border-l border-white/10 text-slate-200">
       {/* Zone Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-studio-850/60">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs uppercase tracking-wider font-semibold text-brand-400">2D Surface Editor</span>
-            <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">
-              {canvasWidth} x {canvasHeight}px
+            <span className="text-[10px] uppercase tracking-widest font-extrabold text-gold-500 font-mono">
+              2D Prepress Stage
+            </span>
+            <span className="text-[9px] bg-studio-950 px-2 py-0.5 rounded text-studio-500 font-mono border border-white/5">
+              {canvasWidth} x {canvasHeight}mm Proof
             </span>
           </div>
-          <h2 className="text-base font-bold text-white mt-0.5">{zoneMeta.label}</h2>
+          <h2 className="text-sm font-bold text-white font-display mt-0.5">{zoneMeta.label}</h2>
         </div>
 
         {currentZone.elements.length > 0 && (
           <button
             onClick={() => clearZone(activeZoneId)}
-            className="flex items-center space-x-1 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20 transition-colors"
+            className="flex items-center space-x-1 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20 transition-all font-semibold"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear Zone</span>
+            <span>Reset Zone</span>
           </button>
         )}
       </div>
 
       {/* Interactive 2D Canvas Area */}
-      <div className="flex-1 p-4 flex flex-col items-center justify-center bg-slate-950/60 overflow-hidden relative">
-        <div className="relative border border-slate-700/60 rounded-xl shadow-2xl overflow-hidden bg-slate-900/40">
+      <div className="flex-1 p-3.5 flex flex-col items-center justify-center bg-studio-950/70 overflow-hidden relative">
+        <div className="relative border border-white/10 rounded-2xl shadow-studio-card overflow-hidden bg-studio-900/60">
           <canvas
             ref={canvasRef}
             width={canvasWidth}
@@ -368,48 +434,75 @@ export const ZoneEditor2D: React.FC = () => {
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            className="cursor-crosshair max-w-full max-h-[300px] object-contain touch-none"
+            className="cursor-crosshair max-w-full max-h-[290px] object-contain touch-none"
           />
 
           {/* Guide Overlay Tag */}
           <div className="absolute top-2 left-2 pointer-events-none">
-            <span className="text-[10px] text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800 flex items-center space-x-1">
-              <Info className="w-3 h-3 text-brand-400" />
-              <span>Dashed line is safe print margin</span>
+            <span className="text-[9px] font-mono text-studio-500 bg-studio-950/80 px-2.5 py-0.5 rounded-md border border-white/5 flex items-center space-x-1 backdrop-blur-md">
+              <Info className="w-3 h-3 text-gold-400" />
+              <span>Dashed guideline = Bleed safety margin</span>
             </span>
           </div>
         </div>
 
-        {/* Selected Element Quick Controls */}
+        {/* Selected Element Inspector Controls */}
         {selectedElement && (
-          <div className="mt-3 w-full max-w-md px-3 py-2 bg-slate-800/90 rounded-xl border border-slate-700/80 flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-3">
-              <span className="font-semibold text-brand-300">
-                {selectedElement.type === 'text' ? 'Text' : 'Image'} Selected
+          <div className="mt-2.5 w-full max-w-md px-3 py-2 bg-studio-850/95 rounded-xl border border-white/10 shadow-studio-card flex flex-wrap items-center justify-between text-xs gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-gold-400 text-[11px] font-display">
+                {selectedElement.type === 'text' ? 'Text' : 'Image'}
               </span>
 
-              {/* Center Alignments */}
+              {/* Center Alignment Buttons */}
               <button
                 onClick={() => updateElement(activeZoneId, selectedElement.id, { x: 50 })}
-                title="Center Horizontally"
-                className="p-1 hover:bg-slate-700 rounded text-slate-300"
+                title="Snap to Center X"
+                className="p-1 hover:bg-studio-750 rounded text-slate-300 transition-colors"
               >
-                <AlignHorizontalJustifyCenter className="w-4 h-4" />
+                <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => updateElement(activeZoneId, selectedElement.id, { y: 50 })}
-                title="Center Vertically"
-                className="p-1 hover:bg-slate-700 rounded text-slate-300"
+                title="Snap to Center Y"
+                className="p-1 hover:bg-studio-750 rounded text-slate-300 transition-colors"
               >
-                <AlignVerticalJustifyCenter className="w-4 h-4" />
+                <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
               </button>
 
-              {/* Scale Slider */}
-              <div className="flex items-center space-x-1 text-[11px] text-slate-400">
-                <span>Scale:</span>
+              {/* Nudge Arrows */}
+              <div className="flex items-center bg-studio-950 px-1 py-0.5 rounded border border-white/5 space-x-0.5">
+                <button onClick={() => handleNudge(-1, 0)} title="Nudge Left" className="p-0.5 hover:text-white text-slate-400">
+                  <ArrowLeft className="w-3 h-3" />
+                </button>
+                <button onClick={() => handleNudge(1, 0)} title="Nudge Right" className="p-0.5 hover:text-white text-slate-400">
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+                <button onClick={() => handleNudge(0, -1)} title="Nudge Up" className="p-0.5 hover:text-white text-slate-400">
+                  <ArrowUp className="w-3 h-3" />
+                </button>
+                <button onClick={() => handleNudge(0, 1)} title="Nudge Down" className="p-0.5 hover:text-white text-slate-400">
+                  <ArrowDown className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Duplicate */}
+              <button
+                onClick={handleDuplicate}
+                title="Duplicate Element"
+                className="p-1 hover:bg-studio-750 rounded text-slate-300 transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Sliders */}
+            <div className="flex items-center space-x-3 text-[11px] text-studio-500 font-mono">
+              <div className="flex items-center space-x-1">
+                <span>Sz:</span>
                 <input
                   type="range"
-                  min="0.4"
+                  min="0.3"
                   max="2.5"
                   step="0.05"
                   value={selectedElement.scale}
@@ -418,12 +511,11 @@ export const ZoneEditor2D: React.FC = () => {
                       scale: parseFloat(e.target.value)
                     })
                   }
-                  className="w-16 accent-brand-500 cursor-pointer"
+                  className="w-14 accent-gold-500 cursor-pointer"
                 />
               </div>
 
-              {/* Rotation Slider */}
-              <div className="flex items-center space-x-1 text-[11px] text-slate-400">
+              <div className="flex items-center space-x-1">
                 <span>Rot:</span>
                 <input
                   type="range"
@@ -436,59 +528,59 @@ export const ZoneEditor2D: React.FC = () => {
                       rotation: parseInt(e.target.value)
                     })
                   }
-                  className="w-16 accent-brand-500 cursor-pointer"
+                  className="w-14 accent-gold-500 cursor-pointer"
                 />
               </div>
-            </div>
 
-            <button
-              onClick={() => removeElement(activeZoneId, selectedElement.id)}
-              className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded"
-              title="Delete Element"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+              <button
+                onClick={() => removeElement(activeZoneId, selectedElement.id)}
+                className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       {/* Bottom Tool Tabs */}
-      <div className="p-4 border-t border-slate-800 bg-slate-900">
+      <div className="p-3.5 border-t border-white/10 bg-studio-900">
         <div className="flex items-center space-x-2 mb-3">
           <button
             onClick={() => setActiveTab('text')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'text'
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-gold-500 text-slate-950 shadow-glow-gold'
+                : 'bg-studio-850 text-slate-300 hover:bg-studio-800'
             }`}
           >
             <Type className="w-3.5 h-3.5" />
-            <span>Add Text</span>
+            <span>Add Typography</span>
           </button>
 
           <button
             onClick={() => setActiveTab('image')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'image'
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-gold-500 text-slate-950 shadow-glow-gold'
+                : 'bg-studio-850 text-slate-300 hover:bg-studio-800'
             }`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
-            <span>Upload Logo</span>
+            <span>Upload Artwork</span>
           </button>
 
           <button
             onClick={() => setActiveTab('presets')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'presets'
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-gold-500 text-slate-950 shadow-glow-gold'
+                : 'bg-studio-850 text-slate-300 hover:bg-studio-800'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Quick Presets</span>
+            <span>Vector Badges</span>
           </button>
         </div>
 
@@ -500,24 +592,24 @@ export const ZoneEditor2D: React.FC = () => {
                 type="text"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Enter custom slogan or company name..."
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                placeholder="Enter headline, company name or slogan..."
+                className="flex-1 bg-studio-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-studio-500 focus:outline-none focus:border-gold-500 font-medium"
               />
               <button
                 onClick={handleAddText}
-                className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md flex items-center space-x-1"
+                className="bg-gold-500 hover:bg-gold-600 text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-glow-gold"
               >
-                <span>Add</span>
+                Add Layer
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Font Family</label>
+                <label className="text-[10px] text-studio-500 block mb-1 font-mono uppercase">Font Family</label>
                 <select
                   value={fontFamily}
                   onChange={(e) => setFontFamily(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  className="w-full bg-studio-850 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
                 >
                   {FONT_OPTIONS.map((f) => (
                     <option key={f.family} value={f.family}>
@@ -528,16 +620,29 @@ export const ZoneEditor2D: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-400 block mb-1">Text Color</label>
+                <label className="text-[10px] text-studio-500 block mb-1 font-mono uppercase">Text Color</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="color"
                     value={textColor}
                     onChange={(e) => setTextColor(e.target.value)}
-                    className="w-8 h-8 rounded border border-slate-700 cursor-pointer bg-transparent"
+                    className="w-7 h-7 rounded border border-white/10 cursor-pointer bg-transparent"
                   />
                   <span className="font-mono text-xs text-slate-300 uppercase">{textColor}</span>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-studio-500 block mb-1 font-mono uppercase">Tracking (px)</label>
+                <input
+                  type="range"
+                  min="-2"
+                  max="12"
+                  step="1"
+                  value={letterSpacing}
+                  onChange={(e) => setLetterSpacing(parseInt(e.target.value))}
+                  className="w-full accent-gold-500 cursor-pointer mt-1"
+                />
               </div>
             </div>
           </div>
@@ -546,10 +651,10 @@ export const ZoneEditor2D: React.FC = () => {
         {/* Tab Content: Image Upload */}
         {activeTab === 'image' && (
           <div className="space-y-3">
-            <label className="border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer bg-slate-800/40 hover:bg-slate-800/80 transition-all">
-              <ImageIcon className="w-8 h-8 text-brand-400 mb-2" />
-              <span className="text-xs font-semibold text-white">Click to Upload Brand Logo</span>
-              <span className="text-[11px] text-slate-400 mt-0.5">Supports high-res PNG, SVG, JPG, WebP</span>
+            <label className="border-2 border-dashed border-white/10 hover:border-gold-500 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer bg-studio-850/40 hover:bg-studio-850/80 transition-all">
+              <ImageIcon className="w-7 h-7 text-gold-400 mb-2" />
+              <span className="text-xs font-bold text-white font-display">Drop Custom Vector or Raster Logo</span>
+              <span className="text-[11px] text-studio-500 mt-0.5">High-res PNG, SVG, JPG, WebP supported</span>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/webp"
@@ -579,10 +684,10 @@ export const ZoneEditor2D: React.FC = () => {
                     scale: 1
                   })
                 }}
-                className="p-2.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-brand-500 flex flex-col items-center justify-center transition-all group"
+                className="p-2.5 rounded-xl bg-studio-850 border border-white/10 hover:border-gold-500 flex flex-col items-center justify-center transition-all group"
               >
-                <img src={p.dataUrl} alt={p.name} className="w-8 h-8 object-contain mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] text-slate-300 font-medium truncate w-full text-center">{p.name}</span>
+                <img src={p.dataUrl} alt={p.name} className="w-8 h-8 object-contain mb-1.5 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] text-slate-300 font-semibold truncate w-full text-center">{p.name}</span>
               </button>
             ))}
           </div>
