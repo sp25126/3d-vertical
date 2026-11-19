@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopify Store Theme Simulation | Embedded 3D Configurator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans">
+
+  <!-- Parent Store Header -->
+  <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-white font-black text-sm">
+        MVP
+      </div>
+      <div>
+        <h1 class="text-base font-extrabold text-slate-900">MVP Visuals Storefront (Shopify Theme Simulation)</h1>
+        <p class="text-xs text-slate-500">Iframe Parent Integration Demo</p>
+      </div>
+    </div>
+
+    <!-- Parent Cart Status Badge -->
+    <div id="parentCartBadge" class="flex items-center space-x-2 bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-xs font-semibold text-amber-800">
+      <span>Shopify Cart Items:</span>
+      <span id="cartCount" class="bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">0</span>
+    </div>
+  </header>
+
+  <!-- Main Parent Page Container -->
+  <main class="max-w-7xl mx-auto p-6 space-y-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">Custom 10x10 Pop-Up Event Canopy Tent</h2>
+        <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+          Demonstrating iframe embed integration. The configurator runs inside an isolated iframe below and passes live design IDs, prices, and line-item properties back to this Shopify parent page via postMessage events.
+        </p>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <button onclick="sendParentCommand('CONFIGURATOR_SET_MODEL', { modelId: '10x10' })" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300">
+          Set 10x10
+        </button>
+        <button onclick="sendParentCommand('CONFIGURATOR_SET_COLOR', { color: '#1E3A8A' })" class="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-semibold rounded-lg border border-blue-300">
+          Navy Dye
+        </button>
+        <button onclick="sendParentCommand('CONFIGURATOR_SET_COLOR', { color: '#DC2626' })" class="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 text-xs font-semibold rounded-lg border border-red-300">
+          Red Dye
+        </button>
+      </div>
+    </div>
+
+    <!-- Iframe Container -->
+    <div class="bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 shadow-xl h-[780px]">
+      <iframe
+        id="configuratorFrame"
+        src="http://localhost:3000"
+        class="w-full h-full border-0"
+        title="Interactive 3D Canopy Configurator"
+        allow="fullscreen"
+      ></iframe>
+    </div>
+
+    <!-- Parent Received Event Log -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+      <h3 class="text-sm font-bold text-slate-900">Live PostMessage Event Log (Parent Listener):</h3>
+      <div id="eventLog" class="bg-slate-900 text-emerald-400 font-mono text-xs p-4 rounded-xl h-40 overflow-y-auto space-y-1">
+        <p class="text-slate-500">// Waiting for events from configurator iframe...</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const iframe = document.getElementById('configuratorFrame')
+    const eventLog = document.getElementById('eventLog')
+    const cartCountEl = document.getElementById('cartCount')
+    let currentCartCount = 0
+
+    // Send command to iframe
+    function sendParentCommand(type, payload) {
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type, payload }, '*')
+        logEvent(`[Sent to Configurator] ${type}: ${JSON.stringify(payload)}`)
+      }
+    }
+
+    // Listen for events from iframe
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'SHOPIFY_CONFIGURATOR_ADD_TO_CART') {
+        currentCartCount++
+        cartCountEl.textContent = currentCartCount
+        logEvent(`[Received from Configurator] SHOPIFY_CONFIGURATOR_ADD_TO_CART`)
+        logEvent(JSON.stringify(event.data.payload, null, 2))
+      }
+    })
+
+    function logEvent(text) {
+      const p = document.createElement('p')
+      p.textContent = `[${new Date().toLocaleTimeString()}] ${text}`
+      eventLog.appendChild(p)
+      eventLog.scrollTop = eventLog.scrollHeight
+    }
+  </script>
+</body>
+</html>

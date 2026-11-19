@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-ssr
+*.local
+extracted_textures
+extracted_glb
+Tent_glb (1).zip
+.vscode
+.idea
+*.log
