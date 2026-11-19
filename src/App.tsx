@@ -5,13 +5,15 @@ import { ShopifyCustomizerPanel } from './components/ui/ShopifyCustomizerPanel'
 import { CartDrawer } from './components/ui/CartDrawer'
 import { useConfiguratorStore } from './store/useConfiguratorStore'
 import { generateProductionPdf } from './services/pdfService'
-import { Eye, Sliders, CheckCircle } from 'lucide-react'
+import { Eye, Sliders, CheckCircle, ChevronLeft } from 'lucide-react'
+import { formatCurrency } from './utils/gstUtils'
 
 export const App: React.FC = () => {
-  const { config, pricing, addToShopifyCart, fetchPricing, setFabricBaseColor, setModelId } = useConfiguratorStore()
+  const { config, pricing, currency, addToShopifyCart, fetchPricing, setFabricBaseColor, setModelId } = useConfiguratorStore()
   const captureSnapshotRef = useRef<(() => string) | null>(null)
   const [mobileTab, setMobileTab] = useState<'3d' | 'customize'>('3d')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true)
 
   useEffect(() => {
     fetchPricing()
@@ -20,6 +22,17 @@ export const App: React.FC = () => {
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3000)
+  }
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev)
+    // Dispatch resize event so Three.js adapts viewport canvas smoothly
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 50)
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 320)
   }
 
   const handleExportPdf = async () => {
@@ -91,11 +104,15 @@ export const App: React.FC = () => {
         </button>
       </div>
 
-      {/* Main Workspace Body (Shopify PDP 2-Column Standard) */}
+      {/* Main Workspace Body */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* Left Column: 3D Studio Stage (55% width) */}
+        {/* Left Column: 3D Studio Stage (Expands to 100% when sidebar is closed) */}
         <div
-          className={`w-full md:w-[55%] lg:w-[58%] h-full relative border-r border-slate-200 ${
+          className={`${
+            isSidebarOpen
+              ? 'w-full md:w-[55%] lg:w-[58%]'
+              : 'w-full md:w-full'
+          } h-full relative transition-all duration-300 ease-in-out border-r border-slate-200 ${
             mobileTab !== '3d' ? 'hidden md:block' : 'block'
           }`}
         >
@@ -103,18 +120,42 @@ export const App: React.FC = () => {
             onCaptureSnapshotRef={(fn) => {
               captureSnapshotRef.current = fn
             }}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={toggleSidebar}
           />
         </div>
 
-        {/* Right Column: Shopify Customizer PDP Flow (45% width) */}
+        {/* Floating Toggle Button when Sidebar is closed */}
+        {!isSidebarOpen && (
+          <button
+            onClick={toggleSidebar}
+            className="hidden md:flex fixed right-6 bottom-6 z-40 items-center space-x-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl hover:bg-black hover:scale-105 active:scale-95 transition-all group font-sans text-xs font-bold border border-slate-700/80 backdrop-blur-md"
+            title="Open Product Options & Customizer"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <Sliders className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform" />
+            <span>Customize Canopy</span>
+            <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-md font-mono text-[11px]">
+              {formatCurrency(pricing.finalTotal, currency)}
+            </span>
+            <ChevronLeft className="w-4 h-4 text-slate-400" />
+          </button>
+        )}
+
+        {/* Right Column: Shopify Customizer PDP Flow (Collapsible) */}
         <div
-          className={`w-full md:w-[45%] lg:w-[42%] h-full flex flex-col bg-white overflow-hidden ${
+          className={`${
+            isSidebarOpen
+              ? 'w-full md:w-[45%] lg:w-[42%] translate-x-0 opacity-100'
+              : 'w-0 max-w-0 translate-x-full opacity-0 pointer-events-none'
+          } h-full flex flex-col bg-white transition-all duration-300 ease-in-out overflow-hidden ${
             mobileTab === '3d' ? 'hidden md:flex' : 'flex'
           }`}
         >
           <ShopifyCustomizerPanel
             onAddToCart={handleAddToCart}
             onExportPdf={handleExportPdf}
+            onClose={toggleSidebar}
           />
         </div>
       </div>

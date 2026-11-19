@@ -22,20 +22,24 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
-  Receipt
+  Receipt,
+  ChevronRight,
+  PanelRightClose
 } from 'lucide-react'
 import { formatCurrency, formatInvoiceAmount } from '../../utils/gstUtils'
 
 interface ShopifyCustomizerPanelProps {
   onAddToCart: () => void
   onExportPdf: () => void
+  onClose?: () => void
 }
 
 type SideKey = 'front' | 'right' | 'back' | 'left'
 
 export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
   onAddToCart,
-  onExportPdf
+  onExportPdf,
+  onClose
 }) => {
   const {
     config,
@@ -72,10 +76,22 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
     <div className="flex flex-col h-full bg-white text-slate-800 overflow-y-auto">
       {/* Product Header / Title Block (Shopify PDP standard) */}
       <div className="p-6 border-b border-slate-200 space-y-3">
-        <div className="flex items-center space-x-2 text-[11px] text-slate-500 font-medium">
-          <span>Commercial Canopies</span>
-          <span>/</span>
-          <span className="text-slate-900 font-semibold">{model.name}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-[11px] text-slate-500 font-medium">
+            <span>Commercial Canopies</span>
+            <span>/</span>
+            <span className="text-slate-900 font-semibold">{model.name}</span>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex items-center space-x-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-all"
+              title="Close panel for full 3D viewport"
+            >
+              <span>Collapse</span>
+              <PanelRightClose className="w-3.5 h-3.5 text-slate-600" />
+            </button>
+          )}
         </div>
 
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">

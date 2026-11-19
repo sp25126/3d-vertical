@@ -35,7 +35,7 @@ export const TENT_MODELS: Record<ProductModelId, ModelMetadata> = {
     basePriceUSD: 749,
     hsnCode: '6306 22 00',
     glbPath: '/models/tent_6.5x6.5.glb',
-    scale: [1, 1, 1],
+    scale: [1.31, 1.15, 1.31],
     features: ['Mid-tier footprint', 'Reinforced truss joints', 'UV50+ & fire-retardant fabric']
   },
   '8x8': {
