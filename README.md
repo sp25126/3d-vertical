@@ -10,11 +10,31 @@ A high-performance, real-time 3D/2D custom product configurator built in **React
 ## 🌟 Comprehensive Feature Matrix
 
 ### 1. Multi-Footprint 3D Viewport (`Three.js` & `WebGL`)
-- **4 Commercial Sizes:** **5' x 5'**, **6.5' x 6.5'**, **8' x 8'**, and **10' x 10'** (MVP Flagship standard).
+- **Standard & Bespoke Footprints:** **5' x 5'**, **6.5' x 6.5'**, **8' x 8'**, **10' x 10'**, plus an interactive **Custom Sizing Engine** ($5\text{ ft} - 25\text{ ft}$ / $1.5\text{m} - 7.6\text{m}$ width & depth).
 - **Physical Calibration:** Parametric bracket heights, leg dimensions, apex heights, and lift offsets tailored to physical GLB mesh bounds.
 - **Hardware Materials:** Real-time PBR material switching between **Commercial White Steel** and **Heavy-Duty Aircraft Aluminum Alloy**.
 - **Studio 3-Point Lighting:** Directional Key Light (`#fffbeb`, 1.35), Fill Light (`#f1f5f9`, 0.60), Rim Light (`#e0f2fe`, 0.80), and Front Fill with **ACESFilmic Tone Mapping** (`exposure: 1.0`) ensuring rich, saturated fabric colors without washout.
+- **Hero Perspective & Side Anchors:** Default calibrated 3/4 isometric beauty perspective with 1-click anchors for `3D ISO`, `FRONT`, `RIGHT`, `BACK`, and `LEFT`.
 - **Collapsible Sidebar:** 1-click toggle to collapse the PDP customizer and enter a clean 100% full-screen 3D viewport mode.
+
+### 2. Blender MCP Parametric Assets & Modular Wall Architecture
+- **Connected Live to Blender 5.2 MCP Server:** Modeled and exported normalized, production-grade modular GLTF/GLB assets:
+  - `modular_full_wall.glb`: Weatherproof 600D polyester fabric wall with double-hem binding, corner seams, and hook-and-loop velcro leg straps.
+  - `modular_half_wall_rail.glb`: Aircraft-grade brushed aluminum crossbar with machined clamp collars, red quick-release tension screws, and hanging fabric skirt.
+- **Dynamic Size Recalibration:** Full back walls, left/right full walls, and half-wall rail skirts dynamically anchor to the tent's `legX`, `legZ`, and `bracketY` coordinates with zero geometry clipping or gaps.
+- **Zip-Down Unroll Animation:** Realistic spring-damped ease-out animation unrolling fabric from top to bottom when toggling walls.
+- **1-Click MVP Visuals Structure Presets:**
+  - 🎪 **Open Canopy:** Clean base frame with zero walls.
+  - 🖼️ **Backdrop Only:** Single full-height back wall enclosure.
+  - 🏛️ **3-Sided Booth:** Full back wall + dual full side walls (U-enclosure).
+  - 🛡️ **Showroom Skirts:** Dual half-height side rail skirts with aluminum crossbars.
+  - 🏢 **Trade Show Kiosk:** Full back + 1 full side + 2 half counter skirts.
+
+### 3. Bespoke Custom Sizing Option
+- Continuous Width and Depth sliders ($5\text{ ft} - 25\text{ ft}$) with direct numeric inputs.
+- Quick aspect presets (`10x10 ft`, `10x15 ft`, `10x20 ft`, `12x12 ft`, `15x15 ft`).
+- Live ground area calculation ($\text{sq ft}$ and $\text{m}^2$) and proportional area-based pricing with statutory 18% GST.
+- Real-time 3D mesh scaling where the frame, scissor trusses, telescoping legs, walls, and ballasts scale simultaneously.
 
 ### 2. Real-World Contextual Environments
 - **Studio Mode:** Clean neutral showroom floor with 360° rotation guidelines and soft contact shadows.
@@ -94,8 +114,7 @@ src/
 │   │   └── ZoneEditor2D.tsx      # Interactive 2D dieline canvas with transform handles
 │   └── ui/
 │       ├── Header.tsx            # Global top bar, currency toggle, size pills, PDF export
-│       ├── ShopifyCustomizerPanel.tsx # Collapsible e-commerce PDP flow
-│       ├── ZoneSelector.tsx      # 8-surface selection matrix with art count badges
+│       ├── ShopifyCustomizerPanel.tsx # Unified PDP customizer, 1-click wall presets & bespoke sizing
 │       └── CartDrawer.tsx        # Shopify cart drawer with line-item metadata
 ├── App.tsx                       # Main application shell with split-view & full-bleed modes
 └── embed-demo.html               # Storefront test harness demonstrating iframe embedding
