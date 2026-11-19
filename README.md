@@ -1,117 +1,138 @@
 # 🎪 3D Interactive Canopy Tent Configurator
 ### Production-Grade Replica of MVP Visuals Custom Canopy Tent Experience
 
-A high-performance, real-time 3D/2D custom product configurator built in **React + TypeScript + Three.js**. Designed for e-commerce scalability, Shopify Storefront integration, dynamic server-driven pricing, and print-ready production PDF proof generation.
+A high-performance, real-time 3D/2D custom product configurator built in **React + TypeScript + Three.js**. Designed for commercial e-commerce scalability, Shopify Storefront integration, statutory Indian GST invoicing (Rule 46 CGST Rules), dynamic server-driven pricing, and factory prepress production PDF proof generation.
+
+**GitHub Repository:** [https://github.com/sp25126/3d-vertical](https://github.com/sp25126/3d-vertical)
 
 ---
 
-## 🌟 Key Features
+## 🌟 Comprehensive Feature Matrix
 
-1. **Multi-Model 3D Viewport (Three.js)**
-   - Supports 4 standard industry footprints: **5' x 5'**, **6.5' x 6.5'**, **8' x 8'**, and **10' x 10'** (MVP Flagship spec).
-   - Realistic PBR studio lighting, directional key lights, ambient fill, and soft contact ground shadows.
-   - 360° damped OrbitControls, zoom bounds, auto-rotation toggle, and zone-focus camera animations.
-   - Real-time material switching between **Commercial Steel** and **Heavy-Duty Hexagonal Aluminum** hardware.
+### 1. Multi-Footprint 3D Viewport (`Three.js` & `WebGL`)
+- **4 Commercial Sizes:** **5' x 5'**, **6.5' x 6.5'**, **8' x 8'**, and **10' x 10'** (MVP Flagship standard).
+- **Physical Calibration:** Parametric bracket heights, leg dimensions, apex heights, and lift offsets tailored to physical GLB mesh bounds.
+- **Hardware Materials:** Real-time PBR material switching between **Commercial White Steel** and **Heavy-Duty Aircraft Aluminum Alloy**.
+- **Studio 3-Point Lighting:** Directional Key Light (`#fffbeb`, 1.35), Fill Light (`#f1f5f9`, 0.60), Rim Light (`#e0f2fe`, 0.80), and Front Fill with **ACESFilmic Tone Mapping** (`exposure: 1.0`) ensuring rich, saturated fabric colors without washout.
+- **Collapsible Sidebar:** 1-click toggle to collapse the PDP customizer and enter a clean 100% full-screen 3D viewport mode.
 
-2. **Multi-Zone Independent 2D Surface Editor**
-   - Direct customization of **4 Canopy Roof Peaks** (Front, Right, Back, Left) and **4 Drop Valances** (Front, Right, Back, Left).
-   - Real-time interactive canvas with direct pointer manipulation: move, scale, rotate, and center objects.
-   - Text engine supporting custom fonts (*Inter, Montserrat, Bebas Neue, Oswald, Pacifico*), sizes, weights, and color pickers.
-   - Image & brand logo uploader (PNG, SVG, JPG, WebP) with auto-centering and bleed margin safety guides.
-   - Quick preset logos (*Summit Athletics, Tech Horizon, Craft Falcon*) for 1-click test evaluation.
+### 2. Real-World Contextual Environments
+- **Studio Mode:** Clean neutral showroom floor with 360° rotation guidelines and soft contact shadows.
+- **Trade Show Mode:** Indoor exhibition convention hall with commercial carpet tiling and overhead event floodlights.
+- **Street Expo Mode:** Outdoor festival with asphalt pavement, warm directional sunlight, and street curb ambiance.
+- **Park Lawn Mode:** Outdoor event lawn with lush procedural grass patterning, park bench prop, and natural sun casting.
 
-3. **Sub-Millisecond 2D ⇄ 3D Texture Synchronization**
-   - Custom **4-way radial UV unfold atlas engine** (`textureSyncService.ts`) mapping 2D designs directly to the GLB mesh coordinates.
-   - Zero-overhead offscreen canvas compositing directly updating `THREE.CanvasTexture` with anisotropic filtering (8x) and linear mipmapping.
+### 3. Human Scale Verification
+- **Realistic 1.80m (5'11") Model:** Standing alongside the tent outside the footprint at a natural angle.
+- **Dual Measurement Ruler:** 3D vertical reference guide showing dimensions in both **meters and feet/inches** (`1.80 m / 5 ft 11 in` person height, `2.10 m / 6 ft 11 in` valance clearance, `3.40 m / 11 ft 2 in` peak apex).
 
-4. **Decoupled Dynamic Pricing Service**
-   - Asynchronous `PricingService` simulating remote ERP/Shopify API latency.
-   - Formula-driven pricing:
-     $$\text{Final Price} = \text{Base Model Cost} + \text{Frame Upgrade} + (\text{Printed Zones} \times \text{Print Fee}) + \text{Accessories} + \text{Estimated Tax}$$
-   - Transparent cost attribution breakdown tooltip.
+### 4. Modular Interactive Accessories
+- **Saddle Sandbags (Set of 4):** Dual-cylinder saddle ballasts (120 lbs wind resistance) that snap firmly to the base of all 4 legs across all tent footprints with a smooth physical drop animation.
+- **Heavy-Duty Spiral Earth Stakes & Ropes:** 12-inch corkscrew auger stakes anchored 100% to the ground plane with tensioned guy lines connecting directly to the 4 canopy corner brackets.
+- **All-Terrain Wheeled Transit Bag:** 1680D ballistic nylon roller case with sealed bearing wheels.
+- **Interactive 3D Part Inspection:** Clicking on legs, canopy fabric, scissor mechanism, sandbags, stakes, or roller bag opens an engineering inspector displaying specifications, materials, and load ratings.
 
-5. **Shopify Storefront Cart & Iframe Integration**
-   - Simulated Shopify Cart slide-over drawer with line-item properties (`_config_id`, `Canopy Dimensions`, `Frame Type`, `Customized Zones`, `_print_cost`, `_preview_thumbnail`).
-   - Mock checkout flow with order confirmation and confetti celebration.
-   - Bi-directional `postMessage` protocol enabling embedding in parent Shopify themes via `<iframe>` (`embed-demo.html`).
+### 5. Multi-Tier Exploded Engineering View
+- Smooth physical component separation:
+  - **Tier 1 (Top):** Canopy fabric lifts as a single unified roof.
+  - **Tier 2 (Middle):** Scissor pantograph truss mechanism expands into the middle tier.
+  - **Tier 3 (Base):** Upright legs and footpads remain firmly grounded on the floor ($Y = 0.00\text{m}$).
 
-6. **Production Spec Sheet PDF Generator**
-   - Client-side vector & raster PDF export via `jsPDF`.
-   - Compiles order reference, customer timestamp, hardware specs, 3D perspective thumbnail render, 2D flat panel proofs with safety guides, Bill of Materials (BOM), and dynamic quote breakdown.
+### 6. 8-Surface Independent 2D Prepress Customizer
+- **4 Roof Peaks & 4 Drop Valances:** Dedicated independent customization of Front, Right, Back, and Left panels.
+- **Direct Pointer Manipulation:** Drag, scale, rotate, and center text and graphic layers on the canvas.
+- **Typography Engine:** Support for custom fonts (*Inter, Montserrat, Bebas Neue, Oswald, Pacifico*), sizes, weights, letter-spacing, and hex color pickers.
+- **Logo & Artwork Uploader:** PNG, SVG, JPG, WebP upload with auto-centering and bleed margin safety guides.
+- **1-Click Bulk Tools:** "Copy to all 4 Peaks" and "Copy to all 4 Valances" for instant 360° branding.
+- **Two-Way 3D Camera Sync:** Switching active customization panels automatically orbits the 3D camera to face that specific surface directly.
+
+### 7. Sub-Millisecond 2D ⇄ 3D Radial UV Atlas Engine
+- Exact 4-way radial atlas layout with `flipY: false` matching glTF UV specifications.
+- Eliminates flipped, mirrored, or upside-down graphics, ensuring text reads upright from left to right on all 4 peaks and valances.
+
+### 8. Statutory Indian GST Tax Invoicing (Page 1) & Prepress Proof (Page 2)
+- **Section 31 CGST Act & Rule 46 CGST Rules, 2017 Compliant:**
+  - Sequential deterministic tax invoice numbering (`MVP/26-27/INV-XXXX`).
+  - Supplier & Recipient GSTIN, PAN, CIN, State Code (27 - Maharashtra).
+  - Itemized table with HSN/SAC codes (`6306 22 00` for tents, `7610 90 90` for alloy frames, `9989 12` for dye-sub printing, `6306 90 00` for accessories).
+  - Statutory 18% GST split: CGST (9.0%) + SGST (9.0%) + IGST (0.0%).
+  - HSN / SAC Tax Analysis Schedule with taxable values and tax totals.
+  - Amount Chargeable in words (`numberToWordsINR`).
+  - Bank remittance details (NEFT/RTGS/UPI) and digitally signed authorization block.
+  - Standard ASCII `INR` currency formatting eliminating jsPDF Unicode glyph bugs.
+- **Factory Prepress Proof (Page 2):**
+  - Side-by-side engineering specifications and **Full-Bleed 3D Perspective Hero Photo** captured at a calibrated 34° isometric beauty angle.
+  - 2D surface prepress dielines and thumbnails with bleed margin certifications.
+  - Factory floor Quality Control sign-off checklist (Vector RIP resolution, Delta-E CMYK calibration, hem clearances).
+
+### 9. Decoupled Pricing Engine & Shopify Cart Integration
+- Real-time dual currency switching (**INR / USD**).
+- Simulated Shopify Storefront slide-over cart with full line-item properties (`_config_id`, `Dimensions`, `Frame Type`, `Customized Zones`, `_preview_thumbnail`).
+- Bi-directional `postMessage` protocol for embedding in Shopify themes (`embed-demo.html`).
 
 ---
 
-## 📐 Architecture & Key Technical Decisions
+## 📐 Project Structure
 
 ```
 src/
-├── types/configurator.ts         # Generic, reusable schema for product variants & zones
-├── constants/tentData.ts         # Tent models, hardware frames, colors, accessories & camera angles
+├── types/configurator.ts         # Central product variant, zone & pricing schema
+├── constants/tentData.ts         # Footprints, frame hardware, accessories & HSN codes
 ├── store/useConfiguratorStore.ts # Centralized Zustand state management
 ├── services/
-│   ├── pricingService.ts         # Async decoupled pricing engine with caching
-│   ├── shopifyService.ts         # Mock Shopify Storefront API & postMessage dispatcher
-│   ├── pdfService.ts             # jsPDF production spec sheet generator
-│   └── textureSyncService.ts     # Master 2048x2048 canvas texture atlas & 3D sync
+│   ├── pricingService.ts         # Asynchronous pricing & tax calculation engine
+│   ├── shopifyService.ts         # Shopify cart line items & postMessage bridge
+│   ├── pdfService.ts             # Statutory GST Tax Invoice & Prepress PDF generator
+│   └── textureSyncService.ts     # 2048x2048 4-way radial UV texture atlas engine
+├── utils/
+│   └── gstUtils.ts               # Indian Rupee to words converter & currency formatters
 ├── components/
 │   ├── viewer3d/
-│   │   └── TentViewport.tsx      # Three.js WebGL scene, lighting, glTF loader & camera lerp
+│   │   ├── TentViewport.tsx      # Three.js scene, PBR lighting, camera animation & accessories
+│   │   └── EnvironmentBuilder.ts # Contextual 3D environments (Studio, Trade Show, Expo, Lawn)
 │   ├── canvas2d/
-│   │   └── ZoneEditor2D.tsx      # Interactive 2D editing surface with transform handles
+│   │   └── ZoneEditor2D.tsx      # Interactive 2D dieline canvas with transform handles
 │   └── ui/
-│       ├── Header.tsx            # Navigation, size selector, presets, live price pill
-│       ├── ZoneSelector.tsx      # 8-surface selector with print count indicators
-│       ├── OptionsDrawer.tsx     # Accordion for footprint, hardware, base dye & accessories
-│       └── CartDrawer.tsx        # Shopify cart drawer with line-item properties
-├── App.tsx                       # Root container with responsive desktop/mobile layouts
-└── embed-demo.html               # Parent storefront test page demonstrating iframe embedding
+│       ├── Header.tsx            # Global top bar, currency toggle, size pills, PDF export
+│       ├── ShopifyCustomizerPanel.tsx # Collapsible e-commerce PDP flow
+│       ├── ZoneSelector.tsx      # 8-surface selection matrix with art count badges
+│       └── CartDrawer.tsx        # Shopify cart drawer with line-item metadata
+├── App.tsx                       # Main application shell with split-view & full-bleed modes
+└── embed-demo.html               # Storefront test harness demonstrating iframe embedding
 ```
-
-### Why Zustand?
-Zustand provides a minimal, un-opinionated store outside of React's component lifecycle. This allows the 3D canvas render loop and the 2D canvas editor to access and update configuration state without triggering unnecessary top-to-bottom React re-renders.
-
-### Why Direct Three.js with Custom Canvas Hooks?
-While React Three Fiber (R3F) is popular, direct Three.js lifecycle management allows:
-1. Absolute control over `texture.needsUpdate = true` and WebGL context memory disposal.
-2. Zero compatibility bottlenecks across major React versions (e.g. React 19).
-3. Precision camera animation lerping and smooth model geometry swapping.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Running Locally
 
 ### Prerequisites
-- Node.js 18+ (tested on Node v24.11.0)
+- Node.js 18+ (tested on Node v22+)
 - npm 9+
 
-### Installation & Local Run
+### Commands
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/sp25126/3d-vertical.git
 cd 3din
 
 # Install dependencies
 npm install
 
-# Start development server
+# Start local development server
 npm run dev
-```
+# Server runs on http://localhost:3002/
 
-Open your browser to `http://localhost:3000` to use the configurator.
-
-### Testing Iframe Embedding
-To test the parent Shopify storefront embedding demo:
-1. Ensure the dev server is running on `http://localhost:3000`.
-2. Open `embed-demo.html` directly in your browser.
-3. Test sending parent commands (`Set 10x10`, `Navy Dye`, `Red Dye`) and inspect live `postMessage` event logs when adding to cart.
-
-### Production Build
-```bash
+# Verify production build
 npm run build
 npm run preview
 ```
 
+### Testing Shopify Iframe Embedding
+1. Ensure the development server is running on `http://localhost:3002`.
+2. Open `embed-demo.html` in your browser.
+3. Use the host controls to test size changes, dye color presets, and cart payloads via the `postMessage` bridge.
+
 ---
 
 ## 📄 License
-MIT License. Created for the Interactive Product Configurator Technical Assessment.
+MIT License. Created for the Interactive 3D Product Configurator Technical Assessment.
