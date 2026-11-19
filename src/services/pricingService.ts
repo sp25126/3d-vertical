@@ -24,7 +24,13 @@ class PricingService {
     const currencySymbol = isINR ? '₹' : '$'
 
     const model = TENT_MODELS[config.modelId]
-    const basePrice = isINR ? (model ? model.basePriceINR : 19999) : (model ? model.basePriceUSD : 1049)
+    let basePrice = isINR ? (model ? model.basePriceINR : 19999) : (model ? model.basePriceUSD : 1049)
+
+    if (config.modelId === 'custom' && config.customDimensions) {
+      const areaSqFt = config.customDimensions.widthFt * config.customDimensions.depthFt
+      const ratePerSqFt = isINR ? 199.99 : 10.49
+      basePrice = Math.max(isINR ? 11999 : 599, Math.round(areaSqFt * ratePerSqFt))
+    }
 
     // Frame type delta
     const frame = FRAME_TYPES[config.frameType]
@@ -173,7 +179,10 @@ class PricingService {
       .map(([k, v]) => `${k}:${v.elements.length}:${v.backgroundColor || ''}`)
       .join('|')
     const accessoriesSummary = [...config.accessories].sort().join(',')
-    return `${config.modelId}__${config.frameType}__${config.fabricBaseColor}__${customizedZoneSummary}__${accessoriesSummary}`
+    const customDimStr = config.modelId === 'custom' && config.customDimensions
+      ? `__w${config.customDimensions.widthFt}d${config.customDimensions.depthFt}`
+      : ''
+    return `${config.modelId}__${config.frameType}__${config.fabricBaseColor}__${customizedZoneSummary}__${accessoriesSummary}${customDimStr}`
   }
 }
 

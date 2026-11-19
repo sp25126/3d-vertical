@@ -9,7 +9,8 @@ import {
   ShopifyCartLineItem,
   TextElement,
   ImageElement,
-  CurrencyCode
+  CurrencyCode,
+  CustomDimensions
 } from '../types/configurator'
 import { pricingService } from '../services/pricingService'
 import { shopifyService } from '../services/shopifyService'
@@ -27,6 +28,12 @@ const DEFAULT_ZONES: Record<ZoneId, { zoneId: ZoneId; elements: CustomElement[] 
 
 const INITIAL_CONFIG: TentConfig = {
   modelId: '10x10',
+  customDimensions: {
+    widthFt: 10,
+    depthFt: 10,
+    widthM: 3.05,
+    depthM: 3.05
+  },
   frameType: 'commercial_steel',
   fabricBaseColor: '#F6AF2D', // MVP Visuals Classic Gold/Amber
   zones: { ...DEFAULT_ZONES },
@@ -50,11 +57,13 @@ interface ConfiguratorState {
   // Actions
   setCurrency: (currency: CurrencyCode) => void
   setModelId: (modelId: ProductModelId) => void
+  setCustomDimensions: (dims: Partial<CustomDimensions>) => void
   setFrameType: (frameType: FrameType) => void
   setFabricBaseColor: (color: string) => void
   setActiveZoneId: (zoneId: ZoneId) => void
   setSelectedElementId: (elementId: string | null) => void
   toggleAccessory: (accessoryId: string) => void
+  setAccessories: (accessoryIds: string[]) => void
   addElement: (zoneId: ZoneId, element: Omit<TextElement, 'id'> | Omit<ImageElement, 'id'>) => void
   updateElement: (zoneId: ZoneId, elementId: string, updates: Partial<CustomElement>) => void
   removeElement: (zoneId: ZoneId, elementId: string) => void
@@ -129,6 +138,39 @@ export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
     get().fetchPricing()
   },
 
+  setCustomDimensions: (dims) => {
+    const current = get().config
+    const prev = current.customDimensions || {
+      widthFt: 10,
+      depthFt: 10,
+      widthM: 3.05,
+      depthM: 3.05
+    }
+    const updated: CustomDimensions = {
+      ...prev,
+      ...dims
+    }
+    if (dims.widthFt !== undefined && dims.widthM === undefined) {
+      updated.widthM = Math.round(dims.widthFt * 0.3048 * 100) / 100
+    }
+    if (dims.depthFt !== undefined && dims.depthM === undefined) {
+      updated.depthM = Math.round(dims.depthFt * 0.3048 * 100) / 100
+    }
+    if (dims.widthM !== undefined && dims.widthFt === undefined) {
+      updated.widthFt = Math.round((dims.widthM / 0.3048) * 10) / 10
+    }
+    if (dims.depthM !== undefined && dims.depthFt === undefined) {
+      updated.depthFt = Math.round((dims.depthM / 0.3048) * 10) / 10
+    }
+    const newConfig = {
+      ...current,
+      modelId: 'custom' as ProductModelId,
+      customDimensions: updated
+    }
+    set({ config: newConfig })
+    get().fetchPricing()
+  },
+
   setFrameType: (frameType) => {
     const current = get().config
     const newConfig = { ...current, frameType }
@@ -154,10 +196,33 @@ export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
   toggleAccessory: (accessoryId) => {
     const current = get().config
     const exists = current.accessories.includes(accessoryId)
-    const newAccessories = exists
-      ? current.accessories.filter((id) => id !== accessoryId)
-      : [...current.accessories, accessoryId]
+    let newAccessories: string[]
+
+    if (exists) {
+      newAccessories = current.accessories.filter((id) => id !== accessoryId)
+    } else {
+      // Handle mutual exclusions for left/right side walls
+      let filtered = [...current.accessories]
+      if (accessoryId === 'wall_left_full') {
+        filtered = filtered.filter((id) => id !== 'wall_left_half')
+      } else if (accessoryId === 'wall_left_half') {
+        filtered = filtered.filter((id) => id !== 'wall_left_full')
+      } else if (accessoryId === 'wall_right_full') {
+        filtered = filtered.filter((id) => id !== 'wall_right_half')
+      } else if (accessoryId === 'wall_right_half') {
+        filtered = filtered.filter((id) => id !== 'wall_right_full')
+      }
+      newAccessories = [...filtered, accessoryId]
+    }
+
     const newConfig = { ...current, accessories: newAccessories }
+    set({ config: newConfig })
+    get().fetchPricing()
+  },
+
+  setAccessories: (accessoryIds) => {
+    const current = get().config
+    const newConfig = { ...current, accessories: accessoryIds }
     set({ config: newConfig })
     get().fetchPricing()
   },

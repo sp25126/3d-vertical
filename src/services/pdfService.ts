@@ -292,7 +292,9 @@ export async function generateProductionPdf({
           ? 'Set of 4 Dual-Cylinder Saddle Ballasts (120 lbs Wind Rating)'
           : acc.id === 'wheelbag'
           ? '1680D Ballistic Nylon Roller Bag with All-Terrain Sealed Casters'
-          : 'Four 12-inch Zinc-Plated Corkscrew Earth Stakes & Guy Ropes',
+          : acc.id === 'stakes'
+          ? 'Four 12-inch Zinc-Plated Corkscrew Earth Stakes & Guy Ropes'
+          : (acc.description.length > 55 ? acc.description.slice(0, 52) + '...' : acc.description),
         hsn: acc.hsnCode || '6306 90 00',
         qty: 1,
         rate: aRate,

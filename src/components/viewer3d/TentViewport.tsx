@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useMemo } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -78,6 +78,14 @@ const MODEL_CALIBRATION: Record<ProductModelId, ModelCalibration> = {
     peakApex: '2.62 m (8 ft 7 in)'
   },
   '10x10': {
+    legX: 1.508,
+    legZ: 1.508,
+    bracketY: 1.500,
+    liftOffset: 0.85,
+    valanceClearance: '2.10 m (6 ft 11 in)',
+    peakApex: '3.40 m (11 ft 2 in)'
+  },
+  custom: {
     legX: 1.508,
     legZ: 1.508,
     bracketY: 1.500,
@@ -230,6 +238,196 @@ function createPersonDimensionRuler(): THREE.Group {
   return rulerGroup
 }
 
+/**
+ * Procedural Modular Full Wall Group (MVP Visuals Architecture)
+ * Anchored to the top valance / frame bracket and hung down to the ground.
+ * Features:
+ * - 600D Weatherproof fabric plane with DoubleSide rendering
+ * - Top valance hook-and-loop fastening hem
+ * - Hook-and-loop velcro leg straps with red accent tabs wrapping both corner legs
+ * - Top-anchored pivot (Y = 0) so scaling Y from 0 to 1 animates a realistic unroll / zip-down
+ */
+function createFullWallGroup(
+  width: number,
+  height: number,
+  color: string,
+  side: 'back' | 'left' | 'right'
+): THREE.Group {
+  const group = new THREE.Group()
+  group.name = `Wall_Full_${side}`
+
+  // Fabric plane hanging downwards from Y = 0 (top anchor) to Y = -height (ground)
+  const fabricGeo = new THREE.PlaneGeometry(width, height, 16, 16)
+  fabricGeo.translate(0, -height / 2, 0)
+
+  const fabricMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color),
+    roughness: 0.72,
+    metalness: 0.03,
+    side: THREE.DoubleSide
+  })
+  const fabricMesh = new THREE.Mesh(fabricGeo, fabricMat)
+  fabricMesh.name = `WallFabric_Full_${side}`
+  fabricMesh.castShadow = true
+  fabricMesh.receiveShadow = true
+  fabricMesh.userData = { isWall: true, wallType: 'full', side }
+  group.add(fabricMesh)
+
+  // Top valance reinforcement hem (velcro binding strip)
+  const hemGeo = new THREE.BoxGeometry(width, 0.035, 0.015)
+  hemGeo.translate(0, -0.0175, 0)
+  const hemMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color).multiplyScalar(0.85),
+    roughness: 0.8,
+    metalness: 0.05
+  })
+  const hemMesh = new THREE.Mesh(hemGeo, hemMat)
+  hemMesh.name = `WallHem_Full_${side}`
+  group.add(hemMesh)
+
+  // Hook-and-loop velcro leg straps wrapped around the 2 flanking legs
+  const strapMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.85,
+    metalness: 0.1
+  })
+  const tabMat = new THREE.MeshStandardMaterial({
+    color: 0xdc2626,
+    roughness: 0.5
+  })
+
+  const strapRatios = [0.18, 0.42, 0.68, 0.90]
+  strapRatios.forEach((ratio) => {
+    const strapY = -height * ratio
+    ;[-width / 2, width / 2].forEach((xPos) => {
+      const strapRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.028, 0.028, 0.032, 16),
+        strapMat
+      )
+      strapRing.position.set(xPos, strapY, 0)
+      group.add(strapRing)
+
+      const tab = new THREE.Mesh(
+        new THREE.BoxGeometry(0.015, 0.015, 0.01),
+        tabMat
+      )
+      tab.position.set(xPos + (xPos > 0 ? 0.025 : -0.025), strapY, 0.015)
+      group.add(tab)
+    })
+  })
+
+  return group
+}
+
+/**
+ * Procedural Modular Half Wall with Aluminum Support Rail (MVP Visuals Architecture)
+ * Features:
+ * - Aircraft-grade brushed aluminum crossbar rail (32mm OD)
+ * - Anodized leg clamp collars with red threaded tension pins on both upright legs
+ * - 600D Weatherproof fabric rail skirt hanging from rail down to ground level
+ * - Top sewn pocket sleeve enclosing the rail
+ * - Lower corner velcro straps
+ */
+function createHalfWallGroup(
+  width: number,
+  railHeight: number,
+  color: string,
+  side: 'left' | 'right' | 'front'
+): THREE.Group {
+  const group = new THREE.Group()
+  group.name = `Wall_Half_${side}`
+
+  const skirtHeight = Math.max(0.1, railHeight - 0.02)
+
+  // 1. Brushed Aircraft-Grade Aluminum Crossbar Rail
+  const railGeo = new THREE.CylinderGeometry(0.016, 0.016, width, 24)
+  railGeo.rotateZ(Math.PI / 2)
+  const railMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0,
+    metalness: 0.9,
+    roughness: 0.22
+  })
+  const railMesh = new THREE.Mesh(railGeo, railMat)
+  railMesh.name = `RailBar_Half_${side}`
+  railMesh.castShadow = true
+  group.add(railMesh)
+
+  // 2. Anodized Leg Clamp Collars with Tension Pins at both ends
+  const clampMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    metalness: 0.8,
+    roughness: 0.35
+  })
+  const knobMat = new THREE.MeshStandardMaterial({
+    color: 0xef4444,
+    metalness: 0.5,
+    roughness: 0.4
+  })
+
+  ;[-width / 2, width / 2].forEach((xPos) => {
+    const clampMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.028, 0.048, 16),
+      clampMat
+    )
+    clampMesh.position.set(xPos, 0, 0)
+    group.add(clampMesh)
+
+    const knobMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.008, 0.008, 0.022, 12),
+      knobMat
+    )
+    knobMesh.rotation.z = Math.PI / 2
+    knobMesh.position.set(xPos + (xPos > 0 ? 0.028 : -0.028), 0, 0)
+    group.add(knobMesh)
+  })
+
+  // 3. Fabric Skirt hanging downwards from rail (Y = 0) to Y = -skirtHeight
+  const skirtGeo = new THREE.PlaneGeometry(width, skirtHeight, 16, 12)
+  skirtGeo.translate(0, -skirtHeight / 2, 0)
+  const fabricMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color),
+    roughness: 0.72,
+    metalness: 0.03,
+    side: THREE.DoubleSide
+  })
+  const skirtMesh = new THREE.Mesh(skirtGeo, fabricMat)
+  skirtMesh.name = `WallFabric_Half_${side}`
+  skirtMesh.castShadow = true
+  skirtMesh.receiveShadow = true
+  skirtMesh.userData = { isWall: true, wallType: 'half', side }
+  group.add(skirtMesh)
+
+  // Top sewn sleeve wrapping the rail bar
+  const sleeveGeo = new THREE.CylinderGeometry(0.019, 0.019, width * 0.96, 20)
+  sleeveGeo.rotateZ(Math.PI / 2)
+  const sleeveMesh = new THREE.Mesh(
+    sleeveGeo,
+    new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color).multiplyScalar(0.92),
+      roughness: 0.75,
+      metalness: 0.02,
+      side: THREE.DoubleSide
+    })
+  )
+  group.add(sleeveMesh)
+
+  // Lower leg velcro straps
+  const strapMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.85
+  })
+  ;[-width / 2, width / 2].forEach((xPos) => {
+    const bottomStrap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.026, 0.026, 0.028, 16),
+      strapMat
+    )
+    bottomStrap.position.set(xPos, -skirtHeight * 0.85, 0)
+    group.add(bottomStrap)
+  })
+
+  return group
+}
+
 export const TentViewport: React.FC<TentViewportProps> = ({
   onCaptureSnapshotRef,
   isSidebarOpen = true,
@@ -241,7 +439,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const controlsRef = useRef<OrbitControls | null>(null)
   const modelGroupRef = useRef<THREE.Group | null>(null)
+  const tentModelSceneRef = useRef<THREE.Group | null>(null)
   const accessoriesGroupRef = useRef<THREE.Group | null>(null)
+  const wallsGroupRef = useRef<THREE.Group | null>(null)
+  const wallMeshesRef = useRef<Map<string, THREE.Group>>(new Map())
+  const prevModelIdRef = useRef<ProductModelId | null>(null)
   const mannequinGroupRef = useRef<THREE.Group | null>(null)
   const envBuilderRef = useRef<EnvironmentBuilder | null>(null)
 
@@ -261,17 +463,19 @@ export const TentViewport: React.FC<TentViewportProps> = ({
   const innerFabricMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
   const metalMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
 
-  // Spherical camera navigation
-  const currentThetaRef = useRef<number>(0)
-  const currentPhiRef = useRef<number>(Math.PI / 2.3)
-  const currentRadiusRef = useRef<number>(3.6)
-  const targetThetaRef = useRef<number>(0)
-  const targetPhiRef = useRef<number>(Math.PI / 2.3)
-  const targetRadiusRef = useRef<number>(3.6)
+  // Spherical camera navigation (calibrated 3/4 hero perspective)
+  const currentThetaRef = useRef<number>(0.38)
+  const currentPhiRef = useRef<number>(Math.PI / 2.45)
+  const currentRadiusRef = useRef<number>(5.0)
+  const targetThetaRef = useRef<number>(0.38)
+  const targetPhiRef = useRef<number>(Math.PI / 2.45)
+  const targetRadiusRef = useRef<number>(5.0)
   const isTransitioningRef = useRef<boolean>(false)
 
   // Component UI State
   const [activeSide, setActiveSide] = useState<TentSide>('front')
+  const [activeViewAngle, setActiveViewAngle] = useState<'3d' | TentSide>('3d')
+  const isInitialMountRef = useRef<boolean>(true)
   const [isLoadingModel, setIsLoadingModel] = useState<boolean>(true)
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
   const [activeEnv, setActiveEnv] = useState<EnvironmentType>('studio')
@@ -300,8 +504,25 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     toggleAutoRotate
   } = useConfiguratorStore()
 
-  const modelMeta = TENT_MODELS[config.modelId]
-  const cal = MODEL_CALIBRATION[config.modelId] || MODEL_CALIBRATION['10x10']
+  const modelMeta = TENT_MODELS[config.modelId] || TENT_MODELS['10x10']
+  const cal: ModelCalibration = useMemo(() => {
+    if (config.modelId === 'custom' && config.customDimensions) {
+      const legX = config.customDimensions.widthM / 2
+      const legZ = config.customDimensions.depthM / 2
+      const bracketY = 1.500
+      const totalH = bracketY + 1.25
+      const totalHFt = Math.round(totalH * 3.28084)
+      return {
+        legX,
+        legZ,
+        bracketY,
+        liftOffset: 0.85,
+        valanceClearance: '2.10 m (6 ft 11 in)',
+        peakApex: `${totalH.toFixed(2)} m (${totalHFt} ft)`
+      }
+    }
+    return MODEL_CALIBRATION[config.modelId] || MODEL_CALIBRATION['10x10']
+  }, [config.modelId, config.customDimensions])
 
   // 1. Initialize Three.js Scene, Camera, Lighting & Controls
   useEffect(() => {
@@ -316,7 +537,15 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     scene.background = new THREE.Color(0xf8fafc)
 
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100)
-    camera.position.set(0, 1.45, 3.6)
+    // Position camera at calibrated 3/4 hero vantage point
+    const initRad = 5.0
+    const initTheta = 0.38
+    const initPhi = Math.PI / 2.45
+    camera.position.set(
+      initRad * Math.sin(initPhi) * Math.sin(initTheta),
+      initRad * Math.cos(initPhi) + 1.15,
+      initRad * Math.sin(initPhi) * Math.cos(initTheta)
+    )
     cameraRef.current = camera
 
     const renderer = new THREE.WebGLRenderer({
@@ -395,6 +624,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     accessoriesGroup.name = 'AccessoriesRoot'
     scene.add(accessoriesGroup)
     accessoriesGroupRef.current = accessoriesGroup
+
+    const wallsGroup = new THREE.Group()
+    wallsGroup.name = 'WallsRoot'
+    scene.add(wallsGroup)
+    wallsGroupRef.current = wallsGroup
 
     const mannequinGroup = new THREE.Group()
     mannequinGroup.name = 'MannequinRoot'
@@ -549,6 +783,21 @@ export const TentViewport: React.FC<TentViewportProps> = ({
             ],
             description: 'Spiral corkscrew earth stakes driven firmly into the ground with high-strength tensioned guy lines connecting directly to the four canopy corner truss brackets.'
           })
+        } else if (hitName.includes('wall') || hitName.includes('rail')) {
+          const isHalf = hitName.includes('half') || hitName.includes('rail')
+          setInspectedPart({
+            name: isHalf ? 'Modular Half Rail Skirt with Aluminum Hardware' : 'Commercial Full Fabric Wall Enclosure',
+            category: 'Modular Fabric Architecture',
+            specs: [
+              { label: 'Fabric Type', value: '600D Weatherproof Poly (280 GSM)' },
+              { label: 'Hardware', value: isHalf ? 'Aircraft Aluminum Crossbar & Leg Clamps' : 'Industrial Hook-and-Loop Leg Straps' },
+              { label: 'UV / Fire', value: 'UV50+ Rated & CPAI-84 Retardant' },
+              { label: 'Finish', value: 'Seamless Dye-Sublimated Matching Color' }
+            ],
+            description: isHalf
+              ? 'Half-height modular rail skirt supported by an aircraft-grade aluminum crossbar and quick-release corner leg clamps. Perfect for trade show counters, product demonstrations, and queue barriers.'
+              : 'Full-height seamless fabric back/side enclosure creating a private booth space and shield against side winds and weather. Fastens securely around the upright legs with heavy-duty hook-and-loop straps.'
+          })
         }
       }
     }
@@ -665,7 +914,15 @@ export const TentViewport: React.FC<TentViewportProps> = ({
       modelMeta.glbPath,
       (gltf: GLTF) => {
         const root = gltf.scene
-        root.scale.set(modelMeta.scale[0], modelMeta.scale[1], modelMeta.scale[2])
+        tentModelSceneRef.current = root
+
+        if (config.modelId === 'custom' && config.customDimensions) {
+          const sX = config.customDimensions.widthM / 2.411
+          const sZ = config.customDimensions.depthM / 2.411
+          root.scale.set(sX, 1.25, sZ)
+        } else {
+          root.scale.set(modelMeta.scale[0], modelMeta.scale[1], modelMeta.scale[2])
+        }
 
         // Locate top-level structural nodes for Exploded View
         let fabNode: THREE.Object3D | null = null
@@ -771,6 +1028,15 @@ export const TentViewport: React.FC<TentViewportProps> = ({
       }
     )
   }, [config.modelId])
+
+  // 2b. Dynamically update custom tent model scale when dimensions change
+  useEffect(() => {
+    if (config.modelId === 'custom' && config.customDimensions && tentModelSceneRef.current) {
+      const sX = config.customDimensions.widthM / 2.411
+      const sZ = config.customDimensions.depthM / 2.411
+      tentModelSceneRef.current.scale.set(sX, 1.25, sZ)
+    }
+  }, [config.customDimensions, config.modelId])
 
   // 3. Update Fabric Texture & Inner Color
   useEffect(() => {
@@ -918,6 +1184,173 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     }
   }, [config.accessories, config.modelId])
 
+  // 6. Modular Fabric Walls & Rail Skirts Lifecycle & Zip-Down Animation
+  useEffect(() => {
+    if (!wallsGroupRef.current) return
+    const wallsRoot = wallsGroupRef.current
+    const activeWalls = wallMeshesRef.current
+
+    // If tent size changed, dispose and clear all active walls so they re-anchor to new dimensions
+    if (prevModelIdRef.current !== config.modelId) {
+      prevModelIdRef.current = config.modelId
+      activeWalls.forEach((wg) => {
+        wallsRoot.remove(wg)
+        wg.traverse((obj) => {
+          if ((obj as THREE.Mesh).isMesh) {
+            const m = obj as THREE.Mesh
+            m.geometry.dispose()
+            if (Array.isArray(m.material)) m.material.forEach((mat) => mat.dispose())
+            else m.material.dispose()
+          }
+        })
+      })
+      activeWalls.clear()
+    }
+
+    const wallDefs: Record<string, () => { group: THREE.Group; posX: number; posY: number; posZ: number; rotY: number }> = {
+      wall_back_full: () => ({
+        group: createFullWallGroup(cal.legX * 2, cal.bracketY, config.fabricBaseColor, 'back'),
+        posX: 0,
+        posY: cal.bracketY + (isExploded ? cal.liftOffset : 0),
+        posZ: -cal.legZ,
+        rotY: 0
+      }),
+      wall_left_full: () => ({
+        group: createFullWallGroup(cal.legZ * 2, cal.bracketY, config.fabricBaseColor, 'left'),
+        posX: -cal.legX,
+        posY: cal.bracketY + (isExploded ? cal.liftOffset : 0),
+        posZ: 0,
+        rotY: Math.PI / 2
+      }),
+      wall_right_full: () => ({
+        group: createFullWallGroup(cal.legZ * 2, cal.bracketY, config.fabricBaseColor, 'right'),
+        posX: cal.legX,
+        posY: cal.bracketY + (isExploded ? cal.liftOffset : 0),
+        posZ: 0,
+        rotY: -Math.PI / 2
+      }),
+      wall_left_half: () => {
+        const railH = cal.bracketY * 0.58
+        return {
+          group: createHalfWallGroup(cal.legZ * 2, railH, config.fabricBaseColor, 'left'),
+          posX: -cal.legX,
+          posY: railH,
+          posZ: 0,
+          rotY: Math.PI / 2
+        }
+      },
+      wall_right_half: () => {
+        const railH = cal.bracketY * 0.58
+        return {
+          group: createHalfWallGroup(cal.legZ * 2, railH, config.fabricBaseColor, 'right'),
+          posX: cal.legX,
+          posY: railH,
+          posZ: 0,
+          rotY: -Math.PI / 2
+        }
+      },
+      wall_front_half: () => {
+        const railH = cal.bracketY * 0.58
+        return {
+          group: createHalfWallGroup(cal.legX * 2, railH, config.fabricBaseColor, 'front'),
+          posX: 0,
+          posY: railH,
+          posZ: cal.legZ,
+          rotY: 0
+        }
+      }
+    }
+
+    const requestedWallIds = config.accessories.filter((id) => id.startsWith('wall_'))
+
+    // 1. Remove walls that are no longer requested (with smooth zip-up exit animation)
+    const currentActiveIds = Array.from(activeWalls.keys())
+    currentActiveIds.forEach((id) => {
+      if (!requestedWallIds.includes(id)) {
+        const wallGroup = activeWalls.get(id)
+        if (wallGroup) {
+          const startScale = wallGroup.scale.y
+          const startTime = performance.now()
+          const animRollup = () => {
+            const elapsed = (performance.now() - startTime) / 1000
+            const t = Math.min(1, elapsed / 0.22)
+            wallGroup.scale.y = startScale * (1 - t)
+            if (t < 1) {
+              requestAnimationFrame(animRollup)
+            } else {
+              wallsRoot.remove(wallGroup)
+              wallGroup.traverse((obj) => {
+                if ((obj as THREE.Mesh).isMesh) {
+                  const m = obj as THREE.Mesh
+                  m.geometry.dispose()
+                  if (Array.isArray(m.material)) m.material.forEach((mat) => mat.dispose())
+                  else m.material.dispose()
+                }
+              })
+              activeWalls.delete(id)
+            }
+          }
+          requestAnimationFrame(animRollup)
+        }
+      }
+    })
+
+    // 2. Add newly requested walls with smooth zip-down unroll animation
+    requestedWallIds.forEach((wallId) => {
+      const builder = wallDefs[wallId]
+      if (!builder) return
+
+      let wallGroup = activeWalls.get(wallId)
+      if (!wallGroup) {
+        const { group, posX, posY, posZ, rotY } = builder()
+        group.position.set(posX, posY, posZ)
+        group.rotation.y = rotY
+        group.scale.y = 0.001 // Start rolled up at the top
+        wallsRoot.add(group)
+        activeWalls.set(wallId, group)
+
+        // Smooth zip-down / unroll animation
+        const startTime = performance.now()
+        const animUnroll = () => {
+          const elapsed = (performance.now() - startTime) / 1000
+          const t = Math.min(1, elapsed / 0.42)
+          // Cubic ease-out
+          const ease = 1 - Math.pow(1 - t, 3)
+          group.scale.y = Math.max(0.001, ease)
+          if (t < 1) {
+            requestAnimationFrame(animUnroll)
+          } else {
+            group.scale.y = 1
+          }
+        }
+        requestAnimationFrame(animUnroll)
+      } else {
+        // Wall already exists: update vertical position for full walls
+        if (wallId.includes('full')) {
+          wallGroup.position.y = cal.bracketY + (isExploded ? cal.liftOffset : 0)
+        }
+        // Update fabric color if base color changed
+        wallGroup.traverse((obj) => {
+          if ((obj as THREE.Mesh).isMesh) {
+            const m = obj as THREE.Mesh
+            if (m.name.startsWith('WallFabric_') || m.name.startsWith('WallHem_')) {
+              const mat = m.material as THREE.MeshStandardMaterial
+              if (mat && mat.color) {
+                const baseColor = new THREE.Color(config.fabricBaseColor)
+                if (m.name.startsWith('WallHem_')) {
+                  mat.color.copy(baseColor.multiplyScalar(0.85))
+                } else {
+                  mat.color.copy(baseColor)
+                }
+                mat.needsUpdate = true
+              }
+            }
+          }
+        })
+      }
+    })
+  }, [config.accessories, config.fabricBaseColor, config.modelId, isExploded])
+
   // 6. Toggle Realistic Person Model (Standing OUTSIDE tent with 3D Ruler)
   useEffect(() => {
     if (!mannequinGroupRef.current) return
@@ -1015,6 +1448,13 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     if (config.accessories.includes('stakes') && stakesGroupRef.current) {
       rebuildStakes(cal, liftY)
     }
+
+    // Update full walls to follow canopy lift
+    wallMeshesRef.current.forEach((wallGroup, wallId) => {
+      if (wallId.includes('full')) {
+        wallGroup.position.y = cal.bracketY + liftY
+      }
+    })
   }
 
   // 8. Update Auto-Rotation
@@ -1036,6 +1476,10 @@ export const TentViewport: React.FC<TentViewportProps> = ({
 
   // 10. Automatically rotate 3D camera to face the activeZoneId side & pitch to surface
   useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return // Preserve 3D ISO hero perspective on initial load
+    }
     if (!activeZoneId) return
     const parts = activeZoneId.split('_')
     const surface = parts[0] // 'peak' | 'valance'
@@ -1043,6 +1487,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({
 
     if (side) {
       setActiveSide(side)
+      setActiveViewAngle(side)
       if (controlsRef.current) {
         controlsRef.current.autoRotate = false
       }
@@ -1059,23 +1504,34 @@ export const TentViewport: React.FC<TentViewportProps> = ({
           targetAngle = Math.PI
           break
         case 'left':
-          targetAngle = (3 * Math.PI) / 2
+          targetAngle = -Math.PI / 2
           break
       }
 
       targetThetaRef.current = targetAngle
       targetPhiRef.current = surface === 'valance' ? Math.PI / 2.15 : Math.PI / 2.45
-      targetRadiusRef.current = 3.6
+      targetRadiusRef.current = cal.legX * 2.2 + 1.6
       isTransitioningRef.current = true
     }
   }, [activeZoneId])
 
-  // Camera side rotation helper
-  const rotateToSide = (side: TentSide) => {
-    setActiveSide(side)
+  // Camera view angle rotation helper (supports 3D ISO hero angle + 4 cardinal sides)
+  const rotateToSide = (angle: '3d' | TentSide) => {
+    setActiveViewAngle(angle)
     if (controlsRef.current) {
       controlsRef.current.autoRotate = false
     }
+
+    if (angle === '3d') {
+      targetThetaRef.current = 0.55
+      targetPhiRef.current = Math.PI / 2.5
+      targetRadiusRef.current = cal.legX * 2.5 + 1.8
+      isTransitioningRef.current = true
+      return
+    }
+
+    const side = angle as TentSide
+    setActiveSide(side)
 
     let targetAngle = 0
     switch (side) {
@@ -1089,13 +1545,13 @@ export const TentViewport: React.FC<TentViewportProps> = ({
         targetAngle = Math.PI
         break
       case 'left':
-        targetAngle = (3 * Math.PI) / 2
+        targetAngle = -Math.PI / 2
         break
     }
 
     targetThetaRef.current = targetAngle
     targetPhiRef.current = Math.PI / 2.3
-    targetRadiusRef.current = 3.6
+    targetRadiusRef.current = cal.legX * 2.2 + 1.6
     isTransitioningRef.current = true
 
     if (activeZoneId) {

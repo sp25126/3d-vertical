@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
         {/* Quick Footprint Size Selector (Fully Clickable) */}
         <div className="hidden lg:flex items-center space-x-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
           <span className="text-[10px] uppercase font-bold text-slate-400 px-2">Size:</span>
-          {(['5x5', '6.5x6.5', '8x8', '10x10'] as ProductModelId[]).map((mId) => (
+          {(['5x5', '6.5x6.5', '8x8', '10x10', 'custom'] as ProductModelId[]).map((mId) => (
             <button
               key={mId}
               onClick={() => setModelId(mId)}
@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              {mId}
+              {mId === 'custom' ? 'Custom' : mId}
             </button>
           ))}
         </div>

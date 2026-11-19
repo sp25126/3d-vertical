@@ -61,6 +61,18 @@ export const TENT_MODELS: Record<ProductModelId, ModelMetadata> = {
     glbPath: '/models/tent_8x8.glb',
     scale: [1.25, 1.25, 1.25],
     features: ['Industry standard 10x10 footprint', 'Edge-to-edge 4K dye-sublimation print', 'Lifetime frame warranty']
+  },
+  custom: {
+    id: 'custom',
+    name: 'Custom Engineered Canopy',
+    dimensions: 'Custom Width x Depth',
+    basePrice: 19999,
+    basePriceINR: 19999,
+    basePriceUSD: 1049,
+    hsnCode: '6306 22 00',
+    glbPath: '/models/tent_8x8.glb',
+    scale: [1.25, 1.25, 1.25],
+    features: ['Bespoke commercial sizing', 'Continuous dynamic structural scaling', 'Lifetime custom truss warranty']
   }
 }
 
@@ -107,6 +119,68 @@ export const PRESET_COLORS = [
 ]
 
 export const ACCESSORIES: AccessoryItem[] = [
+  // --- Modular Fabric Walls & Rail Skirts (MVP Visuals Architecture) ---
+  {
+    id: 'wall_back_full',
+    name: 'Full Back Wall (Backdrop Enclosure)',
+    description: 'Seamless 600D weatherproof polyester full-height back wall with heavy-duty velcro leg straps.',
+    price: 3499,
+    priceINR: 3499,
+    priceUSD: 179,
+    hsnCode: '6306 90 00',
+    category: 'wall'
+  },
+  {
+    id: 'wall_left_full',
+    name: 'Full Side Wall (Left Flank)',
+    description: 'Full-height weatherproof side enclosure with reinforced corner seams and frame attachment loops.',
+    price: 2750,
+    priceINR: 2750,
+    priceUSD: 139,
+    hsnCode: '6306 90 00',
+    category: 'wall'
+  },
+  {
+    id: 'wall_right_full',
+    name: 'Full Side Wall (Right Flank)',
+    description: 'Full-height weatherproof side enclosure with reinforced corner seams and frame attachment loops.',
+    price: 2750,
+    priceINR: 2750,
+    priceUSD: 139,
+    hsnCode: '6306 90 00',
+    category: 'wall'
+  },
+  {
+    id: 'wall_left_half',
+    name: 'Half Side Wall with Mounting Rail (Left)',
+    description: '0.95m rail skirt with aircraft-grade aluminum crossbar and leg clamp collar hardware.',
+    price: 2150,
+    priceINR: 2150,
+    priceUSD: 110,
+    hsnCode: '6306 90 00',
+    category: 'wall'
+  },
+  {
+    id: 'wall_right_half',
+    name: 'Half Side Wall with Mounting Rail (Right)',
+    description: '0.95m rail skirt with aircraft-grade aluminum crossbar and leg clamp collar hardware.',
+    price: 2150,
+    priceINR: 2150,
+    priceUSD: 110,
+    hsnCode: '6306 90 00',
+    category: 'wall'
+  },
+  {
+    id: 'wall_front_half',
+    name: 'Front Counter Skirt with Mounting Rail',
+    description: 'Half-height registration/vending counter skirt with aluminum crossbar and quick-release clamps.',
+    price: 2150,
+    priceINR: 2150,
+    priceUSD: 110,
+    hsnCode: '6306 90 00',
+    category: 'wall'
+  },
+  // --- Anchoring & Transportation Hardware ---
   {
     id: 'sandbags',
     name: 'Heavy-Duty Sandbag Weights (Set of 4)',
@@ -114,7 +188,8 @@ export const ACCESSORIES: AccessoryItem[] = [
     price: 1250,
     priceINR: 1250,
     priceUSD: 49,
-    hsnCode: '6306 90 00'
+    hsnCode: '6306 90 00',
+    category: 'hardware'
   },
   {
     id: 'wheelbag',
@@ -123,7 +198,8 @@ export const ACCESSORIES: AccessoryItem[] = [
     price: 1850,
     priceINR: 1850,
     priceUSD: 69,
-    hsnCode: '4202 92 00'
+    hsnCode: '4202 92 00',
+    category: 'hardware'
   },
   {
     id: 'stakes',
@@ -132,7 +208,8 @@ export const ACCESSORIES: AccessoryItem[] = [
     price: 750,
     priceINR: 750,
     priceUSD: 29,
-    hsnCode: '7326 90 99'
+    hsnCode: '7326 90 99',
+    category: 'hardware'
   }
 ]
 

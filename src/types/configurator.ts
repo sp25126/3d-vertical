@@ -1,4 +1,11 @@
-export type ProductModelId = '5x5' | '6.5x6.5' | '8x8' | '10x10'
+export type ProductModelId = '5x5' | '6.5x6.5' | '8x8' | '10x10' | 'custom'
+
+export interface CustomDimensions {
+  widthFt: number
+  depthFt: number
+  widthM: number
+  depthM: number
+}
 
 export type FrameType = 'commercial_steel' | 'heavy_duty_aluminum'
 
@@ -65,10 +72,12 @@ export interface AccessoryItem {
   hsnCode?: string
   imageUrl?: string
   included?: boolean
+  category?: 'wall' | 'hardware'
 }
 
 export interface TentConfig {
   modelId: ProductModelId
+  customDimensions?: CustomDimensions
   frameType: FrameType
   fabricBaseColor: string
   zones: Record<ZoneId, ZoneCustomization>

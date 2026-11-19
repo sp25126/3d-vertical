@@ -39,6 +39,65 @@ interface ShopifyCustomizerPanelProps {
 
 type SideKey = 'front' | 'right' | 'back' | 'left'
 
+interface WallPreset {
+  id: string
+  name: string
+  desc: string
+  wallIds: string[]
+  check: (accs: string[]) => boolean
+}
+
+const WALL_PRESETS: WallPreset[] = [
+  {
+    id: 'preset_open',
+    name: 'Open Canopy',
+    desc: 'Base frame (0 walls)',
+    wallIds: [],
+    check: (accs: string[]) => !accs.some((id) => id.startsWith('wall_'))
+  },
+  {
+    id: 'preset_backdrop',
+    name: 'Backdrop Only',
+    desc: 'Full back wall',
+    wallIds: ['wall_back_full'],
+    check: (accs: string[]) => {
+      const walls = accs.filter((id) => id.startsWith('wall_'))
+      return walls.length === 1 && walls[0] === 'wall_back_full'
+    }
+  },
+  {
+    id: 'preset_booth3',
+    name: '3-Sided Booth',
+    desc: 'Back + 2 full sides',
+    wallIds: ['wall_back_full', 'wall_left_full', 'wall_right_full'],
+    check: (accs: string[]) =>
+      accs.includes('wall_back_full') &&
+      accs.includes('wall_left_full') &&
+      accs.includes('wall_right_full')
+  },
+  {
+    id: 'preset_skirts',
+    name: 'Showroom Skirts',
+    desc: 'Dual half rail skirts',
+    wallIds: ['wall_left_half', 'wall_right_half'],
+    check: (accs: string[]) =>
+      accs.includes('wall_left_half') &&
+      accs.includes('wall_right_half') &&
+      !accs.includes('wall_back_full')
+  },
+  {
+    id: 'preset_kiosk',
+    name: 'Trade Show Kiosk',
+    desc: 'Back + side + 2 half',
+    wallIds: ['wall_back_full', 'wall_right_full', 'wall_left_half', 'wall_front_half'],
+    check: (accs: string[]) =>
+      accs.includes('wall_back_full') &&
+      accs.includes('wall_right_full') &&
+      accs.includes('wall_left_half') &&
+      accs.includes('wall_front_half')
+  }
+]
+
 export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
   onAddToCart,
   onExportPdf,
@@ -52,9 +111,11 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
     activeZoneId,
     setActiveZoneId,
     setModelId,
+    setCustomDimensions,
     setFrameType,
     setFabricBaseColor,
     toggleAccessory,
+    setAccessories,
     copyZoneToAllSides,
     clearAllZones,
     clearZone
@@ -147,7 +208,7 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
           <label className="text-xs font-bold uppercase tracking-wider text-slate-900 block">
             1. Select Canopy Footprint
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {(Object.keys(TENT_MODELS) as ProductModelId[]).map((mId) => {
               const m = TENT_MODELS[mId]
               const isSelected = config.modelId === mId
@@ -156,20 +217,101 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
                 <button
                   key={mId}
                   onClick={() => setModelId(mId)}
-                  className={`p-3 rounded-xl border text-center transition-all ${
+                  className={`p-2.5 rounded-xl border text-center transition-all ${
                     isSelected
                       ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
                       : 'border-slate-200 hover:border-slate-300 bg-white text-slate-800'
                   }`}
                 >
-                  <span className="text-xs font-black block">{mId}</span>
-                  <span className={`text-[10px] block mt-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
-                    from {formatCurrency(itemBase, currency)}
+                  <span className="text-xs font-black block capitalize">{mId}</span>
+                  <span className={`text-[9.5px] block mt-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
+                    {mId === 'custom' ? 'Bespoke' : `from ${formatCurrency(itemBase, currency)}`}
                   </span>
                 </button>
               )
             })}
           </div>
+
+          {/* Interactive Custom Sizing Controls */}
+          {config.modelId === 'custom' && (
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3 mt-2 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-amber-600" />
+                  Custom Dimensional Parameters
+                </span>
+                <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200/60">
+                  {(config.customDimensions?.widthFt || 10) * (config.customDimensions?.depthFt || 10)} sq ft • {((config.customDimensions?.widthM || 3.05) * (config.customDimensions?.depthM || 3.05)).toFixed(1)} m²
+                </span>
+              </div>
+
+              {/* Quick Dimension Presets */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: '10x10 ft', w: 10, d: 10 },
+                  { label: '10x15 ft', w: 10, d: 15 },
+                  { label: '10x20 ft', w: 10, d: 20 },
+                  { label: '12x12 ft', w: 12, d: 12 },
+                  { label: '15x15 ft', w: 15, d: 15 }
+                ].map((pre) => {
+                  const isCur =
+                    (config.customDimensions?.widthFt || 10) === pre.w &&
+                    (config.customDimensions?.depthFt || 10) === pre.d
+                  return (
+                    <button
+                      key={pre.label}
+                      onClick={() => setCustomDimensions({ widthFt: pre.w, depthFt: pre.d })}
+                      className={`text-[10.5px] px-2 py-1 rounded-lg font-bold border transition-all ${
+                        isCur
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'
+                      }`}
+                    >
+                      {pre.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Width Slider & Input */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px] font-bold text-slate-700">
+                  <span>Width (Front & Back Span)</span>
+                  <span className="font-mono text-amber-900">
+                    {config.customDimensions?.widthFt || 10} ft ({config.customDimensions?.widthM || 3.05} m)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="25"
+                  step="0.5"
+                  value={config.customDimensions?.widthFt || 10}
+                  onChange={(e) => setCustomDimensions({ widthFt: parseFloat(e.target.value) })}
+                  className="w-full accent-amber-600 cursor-pointer h-1.5 bg-amber-200/60 rounded-lg"
+                />
+              </div>
+
+              {/* Depth Slider & Input */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px] font-bold text-slate-700">
+                  <span>Depth (Left & Right Flank Span)</span>
+                  <span className="font-mono text-amber-900">
+                    {config.customDimensions?.depthFt || 10} ft ({config.customDimensions?.depthM || 3.05} m)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="25"
+                  step="0.5"
+                  value={config.customDimensions?.depthFt || 10}
+                  onChange={(e) => setCustomDimensions({ depthFt: parseFloat(e.target.value) })}
+                  className="w-full accent-amber-600 cursor-pointer h-1.5 bg-amber-200/60 rounded-lg"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 2. Frame Hardware */}
@@ -423,44 +565,143 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
           </div>
         </div>
 
-        {/* 5. Accessories Add-ons */}
-        <div className="space-y-2.5 pt-2 border-t border-slate-200">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-900 block">
-            5. Recommended Accessories
-          </label>
-          <div className="space-y-2">
-            {ACCESSORIES.map((acc) => {
-              const isSelected = config.accessories.includes(acc.id)
-              const accPrice = isINR ? (acc.priceINR || acc.price) : (acc.priceUSD || acc.price)
-              return (
-                <button
-                  key={acc.id}
-                  onClick={() => toggleAccessory(acc.id)}
-                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                    isSelected
-                      ? 'border-slate-900 bg-slate-50'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
-                  }`}
-                >
-                  <div className="pr-3">
-                    <span className="text-xs font-bold text-slate-900 block">{acc.name}</span>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">{acc.description}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 shrink-0">
-                    <span className="text-xs font-mono font-bold text-slate-900">
-                      +{formatCurrency(accPrice, currency)}
+        {/* 5. Modular Fabric Walls & Accessories (MVP Architecture) */}
+        <div className="space-y-3.5 pt-2 border-t border-slate-200">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-900 block">
+              5. Modular Walls & Accessories
+            </label>
+            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+              MVP Visuals Configs
+            </span>
+          </div>
+
+          {/* 1-Click MVP Visuals Structure Presets */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                Quick Structure Presets
+              </span>
+              <span className="text-[10px] text-slate-400">Ref. MVP 10x10 Series</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {WALL_PRESETS.map((preset) => {
+                const isActive = preset.check(config.accessories)
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      const hardwareOnly = config.accessories.filter(
+                        (id) => !id.startsWith('wall_')
+                      )
+                      setAccessories([...hardwareOnly, ...preset.wallIds])
+                    }}
+                    className={`p-2 rounded-xl text-left border transition-all ${
+                      isActive
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                    }`}
+                  >
+                    <span className="text-[11px] font-bold block truncate">{preset.name}</span>
+                    <span className={`text-[9.5px] block truncate ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>
+                      {preset.desc}
                     </span>
-                    <div
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                        isSelected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 bg-white'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Modular Fabric Enclosures & Rail Skirts */}
+          <div className="space-y-2 pt-1">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide block">
+              Modular Fabric Enclosures & Rail Skirts
+            </span>
+            <div className="space-y-1.5">
+              {ACCESSORIES.filter((a) => a.category === 'wall').map((acc) => {
+                const isSelected = config.accessories.includes(acc.id)
+                const accPrice = isINR ? (acc.priceINR || acc.price) : (acc.priceUSD || acc.price)
+                const isHalf = acc.id.includes('half')
+                return (
+                  <button
+                    key={acc.id}
+                    onClick={() => toggleAccessory(acc.id)}
+                    className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                      isSelected
+                        ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900/10'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="pr-2">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-xs font-bold text-slate-900">{acc.name}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                          isHalf
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          {isHalf ? 'Half Skirt + Rail' : 'Full Wall'}
+                        </span>
+                      </div>
+                      <span className="text-[10.5px] text-slate-500 block mt-0.5 leading-snug">{acc.description}</span>
                     </div>
-                  </div>
-                </button>
-              )
-            })}
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <span className="text-xs font-mono font-bold text-slate-900">
+                        +{formatCurrency(accPrice, currency)}
+                      </span>
+                      <div
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                          isSelected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5" />}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Ground Anchors & Transit Hardware */}
+          <div className="space-y-2 pt-1">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide block">
+              Ground Anchoring & Transit Gear
+            </span>
+            <div className="space-y-1.5">
+              {ACCESSORIES.filter((a) => a.category === 'hardware' || !a.category).map((acc) => {
+                const isSelected = config.accessories.includes(acc.id)
+                const accPrice = isINR ? (acc.priceINR || acc.price) : (acc.priceUSD || acc.price)
+                return (
+                  <button
+                    key={acc.id}
+                    onClick={() => toggleAccessory(acc.id)}
+                    className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                      isSelected
+                        ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900/10'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="pr-2">
+                      <span className="text-xs font-bold text-slate-900 block">{acc.name}</span>
+                      <span className="text-[10.5px] text-slate-500 block mt-0.5 leading-snug">{acc.description}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <span className="text-xs font-mono font-bold text-slate-900">
+                        +{formatCurrency(accPrice, currency)}
+                      </span>
+                      <div
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                          isSelected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5" />}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
