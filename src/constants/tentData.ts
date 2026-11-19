@@ -40,25 +40,27 @@ export const TENT_MODELS: Record<ProductModelId, ModelMetadata> = {
   },
   '10x10': {
     id: '10x10',
-    name: "10' x 10' Flagship Pro Canopy (MVP Spec)",
+    name: "10' x 10' Flagship Pro Canopy",
     dimensions: "10ft x 10ft (3.0m x 3.0m)",
     basePrice: 1049,
-    glbPath: '/models/tent_8x8.glb', // Scaled 1.25x
+    glbPath: '/models/tent_8x8.glb',
     scale: [1.25, 1.25, 1.25],
-    features: ['Industry gold-standard 10x10', 'Dye-sublimation 4K edge-to-edge', 'Lifetime warranty']
+    features: ['Industry standard 10x10', 'Dye-sublimation edge-to-edge 4K', 'Lifetime frame warranty']
   }
 }
 
-export const FRAME_TYPES: Record<FrameType, { name: string; priceDelta: number; desc: string }> = {
+export const FRAME_TYPES: Record<FrameType, { name: string; priceDelta: number; desc: string; badge: string }> = {
   commercial_steel: {
     name: 'Commercial White Steel Frame',
     priceDelta: 0,
-    desc: 'Heavy-duty steel with rust-resistant powder coat finish'
+    desc: 'Heavy-duty steel with rust-resistant powder coat finish (52 lbs)',
+    badge: 'Standard'
   },
   heavy_duty_aluminum: {
     name: 'Heavy-Duty 50mm Hex Aluminum Frame',
     priceDelta: 120,
-    desc: '40% lighter, corrosion-proof, extra-thick aircraft grade hexagonal legs'
+    desc: '40% lighter, corrosion-proof, 50mm hexagonal aircraft-grade legs (38 lbs)',
+    badge: 'Pro Upgrade'
   }
 }
 
@@ -78,27 +80,21 @@ export const PRESET_COLORS = [
 export const ACCESSORIES: AccessoryItem[] = [
   {
     id: 'sandbags',
-    name: 'Heavy-Duty Sandbag Weight Bags (Set of 4)',
-    description: 'Each bag holds up to 30 lbs of sand to anchor your canopy safely in winds up to 28 mph.',
+    name: 'Heavy-Duty Sandbag Weights (Set of 4)',
+    description: 'Holds up to 120 lbs total to anchor canopy in winds up to 28 mph.',
     price: 49
   },
   {
     id: 'wheelbag',
     name: 'All-Terrain Wheeled Transit Roller Bag',
-    description: 'Reinforced 1680D nylon with rugged sealed-bearing urethane wheels and side handles.',
+    description: 'Rugged 1680D ballistic nylon with smooth urethane wheels.',
     price: 69
   },
   {
     id: 'stakes',
-    name: 'Pro Ground Anchor Steel Stakes & Guy Ropes',
-    description: 'Four 12-inch spiral steel stakes and reflective high-tensile tie-downs.',
+    name: 'Heavy-Duty Spiral Ground Stakes & Ropes',
+    description: 'Four 12-inch zinc-plated steel spiral stakes and tie-down guy ropes.',
     price: 29
-  },
-  {
-    id: 'half_wall_front',
-    name: 'Front Half-Wall with Telescoping Support Bar',
-    description: '36-inch high matching branded barrier wall perfect for ticketing or serving.',
-    price: 89
   }
 ]
 
@@ -106,78 +102,106 @@ export interface ZoneMeta {
   id: ZoneId
   label: string
   shortLabel: string
+  side: 'front' | 'right' | 'back' | 'left'
   group: 'peak' | 'valance'
-  cameraAngle: {
-    azimuth: number // horizontal orbit angle in radians
-    polar: number   // vertical orbit angle in radians
-    distance: number
-  }
+  azimuthAngle: number // Exact horizontal angle in radians
+  polarAngle: number   // Exact vertical angle in radians
+  distance: number
   printCost: number
 }
 
+// Coordinate system:
+// Front (+Z): azimuth = 0
+// Right (+X): azimuth = Math.PI / 2
+// Back (-Z): azimuth = Math.PI
+// Left (-X): azimuth = -Math.PI / 2
 export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
   peak_front: {
     id: 'peak_front',
-    label: 'Front Peak (Peak 1)',
+    label: 'Front Peak (Roof 1)',
     shortLabel: 'Front Peak',
+    side: 'front',
     group: 'peak',
-    cameraAngle: { azimuth: 0, polar: Math.PI / 2.3, distance: 3.5 },
+    azimuthAngle: 0,
+    polarAngle: Math.PI / 2.3,
+    distance: 3.5,
     printCost: 45
   },
   peak_right: {
     id: 'peak_right',
-    label: 'Right Peak (Peak 2)',
+    label: 'Right Peak (Roof 2)',
     shortLabel: 'Right Peak',
+    side: 'right',
     group: 'peak',
-    cameraAngle: { azimuth: Math.PI / 2, polar: Math.PI / 2.3, distance: 3.5 },
+    azimuthAngle: Math.PI / 2,
+    polarAngle: Math.PI / 2.3,
+    distance: 3.5,
     printCost: 45
   },
   peak_back: {
     id: 'peak_back',
-    label: 'Back Peak (Peak 3)',
+    label: 'Back Peak (Roof 3)',
     shortLabel: 'Back Peak',
+    side: 'back',
     group: 'peak',
-    cameraAngle: { azimuth: Math.PI, polar: Math.PI / 2.3, distance: 3.5 },
+    azimuthAngle: Math.PI,
+    polarAngle: Math.PI / 2.3,
+    distance: 3.5,
     printCost: 45
   },
   peak_left: {
     id: 'peak_left',
-    label: 'Left Peak (Peak 4)',
+    label: 'Left Peak (Roof 4)',
     shortLabel: 'Left Peak',
+    side: 'left',
     group: 'peak',
-    cameraAngle: { azimuth: -Math.PI / 2, polar: Math.PI / 2.3, distance: 3.5 },
+    azimuthAngle: -Math.PI / 2,
+    polarAngle: Math.PI / 2.3,
+    distance: 3.5,
     printCost: 45
   },
   valance_front: {
     id: 'valance_front',
     label: 'Front Valance (Drop 1)',
     shortLabel: 'Front Valance',
+    side: 'front',
     group: 'valance',
-    cameraAngle: { azimuth: 0, polar: Math.PI / 2.1, distance: 3.2 },
+    azimuthAngle: 0,
+    polarAngle: Math.PI / 2.15,
+    distance: 3.2,
     printCost: 25
   },
   valance_right: {
     id: 'valance_right',
     label: 'Right Valance (Drop 2)',
     shortLabel: 'Right Valance',
+    side: 'right',
     group: 'valance',
-    cameraAngle: { azimuth: Math.PI / 2, polar: Math.PI / 2.1, distance: 3.2 },
+    azimuthAngle: Math.PI / 2,
+    polarAngle: Math.PI / 2.15,
+    distance: 3.2,
     printCost: 25
   },
   valance_back: {
     id: 'valance_back',
     label: 'Back Valance (Drop 3)',
     shortLabel: 'Back Valance',
+    side: 'back',
     group: 'valance',
-    cameraAngle: { azimuth: Math.PI, polar: Math.PI / 2.1, distance: 3.2 },
+    azimuthAngle: Math.PI,
+    polarAngle: Math.PI / 2.15,
+    distance: 3.2,
     printCost: 25
   },
   valance_left: {
     id: 'valance_left',
     label: 'Left Valance (Drop 4)',
     shortLabel: 'Left Valance',
+    side: 'left',
     group: 'valance',
-    cameraAngle: { azimuth: -Math.PI / 2, polar: Math.PI / 2.1, distance: 3.2 },
+    azimuthAngle: -Math.PI / 2,
+    polarAngle: Math.PI / 2.15,
+    distance: 3.2,
     printCost: 25
   }
 }

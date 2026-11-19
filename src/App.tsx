@@ -1,18 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Header } from './components/ui/Header'
 import { TentViewport } from './components/viewer3d/TentViewport'
-import { ZoneSelector } from './components/ui/ZoneSelector'
-import { ZoneEditor2D } from './components/canvas2d/ZoneEditor2D'
-import { OptionsDrawer } from './components/ui/OptionsDrawer'
+import { ShopifyCustomizerPanel } from './components/ui/ShopifyCustomizerPanel'
 import { CartDrawer } from './components/ui/CartDrawer'
 import { useConfiguratorStore } from './store/useConfiguratorStore'
 import { generateProductionPdf } from './services/pdfService'
-import { Eye, Edit3, Sliders, CheckCircle } from 'lucide-react'
+import { Eye, Sliders, CheckCircle } from 'lucide-react'
 
 export const App: React.FC = () => {
   const { config, pricing, addToShopifyCart, fetchPricing, setFabricBaseColor, setModelId } = useConfiguratorStore()
   const captureSnapshotRef = useRef<(() => string) | null>(null)
-  const [mobileTab, setMobileTab] = useState<'3d' | '2d' | 'options'>('3d')
+  const [mobileTab, setMobileTab] = useState<'3d' | 'customize'>('3d')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -25,7 +23,7 @@ export const App: React.FC = () => {
   }
 
   const handleExportPdf = async () => {
-    showToast('Compiling High-Resolution Production Spec PDF...')
+    showToast('Compiling Production Spec Sheet (PDF)...')
     const snapshotUrl = captureSnapshotRef.current ? captureSnapshotRef.current() : undefined
     await generateProductionPdf({
       config,
@@ -39,7 +37,7 @@ export const App: React.FC = () => {
     const snapshotUrl = captureSnapshotRef.current ? captureSnapshotRef.current() : undefined
     const success = await addToShopifyCart(snapshotUrl)
     if (success) {
-      showToast('Custom canopy added to Shopify Cart payload!')
+      showToast('Custom canopy added to your Shopify Cart!')
     }
   }
 
@@ -59,54 +57,45 @@ export const App: React.FC = () => {
   }, [])
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-studio-950 text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-screen bg-white text-slate-900 overflow-hidden font-sans">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center space-x-2.5 bg-studio-900/95 text-white px-4 py-3 rounded-2xl shadow-glow-gold border border-gold-500/40 text-xs font-bold font-display backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-200">
-          <CheckCircle className="w-4 h-4 text-gold-400 shrink-0" />
+        <div className="fixed top-20 right-6 z-50 flex items-center space-x-2.5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-bold font-sans animate-in fade-in slide-in-from-top-3 duration-200">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Main Global Header */}
+      {/* Main Global Shopify Store Header */}
       <Header onExportPdf={handleExportPdf} onAddToCart={handleAddToCart} />
 
       {/* Mobile Tab Switcher */}
-      <div className="md:hidden flex border-b border-white/10 bg-studio-900 text-xs">
+      <div className="md:hidden flex border-b border-slate-200 bg-white text-xs font-bold">
         <button
           onClick={() => setMobileTab('3d')}
-          className={`flex-1 py-3 flex items-center justify-center space-x-1.5 font-bold transition-all ${
-            mobileTab === '3d' ? 'bg-gold-500 text-slate-950 shadow-glow-gold' : 'text-studio-500'
+          className={`flex-1 py-3 flex items-center justify-center space-x-1.5 transition-all ${
+            mobileTab === '3d' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-500'
           }`}
         >
           <Eye className="w-4 h-4" />
-          <span>3D View</span>
+          <span>Interactive 3D Stage</span>
         </button>
         <button
-          onClick={() => setMobileTab('2d')}
-          className={`flex-1 py-3 flex items-center justify-center space-x-1.5 font-bold transition-all ${
-            mobileTab === '2d' ? 'bg-gold-500 text-slate-950 shadow-glow-gold' : 'text-studio-500'
-          }`}
-        >
-          <Edit3 className="w-4 h-4" />
-          <span>2D Prepress</span>
-        </button>
-        <button
-          onClick={() => setMobileTab('options')}
-          className={`flex-1 py-3 flex items-center justify-center space-x-1.5 font-bold transition-all ${
-            mobileTab === 'options' ? 'bg-gold-500 text-slate-950 shadow-glow-gold' : 'text-studio-500'
+          onClick={() => setMobileTab('customize')}
+          className={`flex-1 py-3 flex items-center justify-center space-x-1.5 transition-all ${
+            mobileTab === 'customize' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-500'
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>Specs</span>
+          <span>Product Options & Prepress</span>
         </button>
       </div>
 
-      {/* Main Workspace Body */}
+      {/* Main Workspace Body (Shopify PDP 2-Column Standard) */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* Left: 3D Viewport Area */}
+        {/* Left Column: 3D Studio Stage (55% width) */}
         <div
-          className={`w-full md:w-[54%] lg:w-[58%] h-full relative ${
+          className={`w-full md:w-[55%] lg:w-[58%] h-full relative border-r border-slate-200 ${
             mobileTab !== '3d' ? 'hidden md:block' : 'block'
           }`}
         >
@@ -117,26 +106,20 @@ export const App: React.FC = () => {
           />
         </div>
 
-        {/* Right: 2D Prepress & Customization Panel */}
+        {/* Right Column: Shopify Customizer PDP Flow (45% width) */}
         <div
-          className={`w-full md:w-[46%] lg:w-[42%] h-full flex flex-col bg-studio-900 border-l border-white/10 overflow-y-auto ${
+          className={`w-full md:w-[45%] lg:w-[42%] h-full flex flex-col bg-white overflow-hidden ${
             mobileTab === '3d' ? 'hidden md:flex' : 'flex'
           }`}
         >
-          {/* Surface Zone Selector */}
-          <ZoneSelector />
-
-          {/* 2D Canvas Interactive Surface Editor */}
-          <div className="flex-1 min-h-[360px]">
-            <ZoneEditor2D />
-          </div>
-
-          {/* Product Specifications & Accessories Options */}
-          <OptionsDrawer />
+          <ShopifyCustomizerPanel
+            onAddToCart={handleAddToCart}
+            onExportPdf={handleExportPdf}
+          />
         </div>
       </div>
 
-      {/* Shopify Cart Drawer */}
+      {/* Shopify Cart Slide-Over Drawer */}
       <CartDrawer onExportPdf={handleExportPdf} />
     </div>
   )

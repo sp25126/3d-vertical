@@ -11,73 +11,83 @@ export interface ZoneAtlasMapping {
   h: number
   // Rotation in radians
   rotation: number
+  // Vertical flip required due to Three.js canvasTexture flipY
+  flipY: boolean
 }
 
-// 4-way radial unfold atlas mapping based on exact GLB mesh UVs
+// Exact mathematical 4-way radial atlas mappings matching GLB UV unwraps
 export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
   peak_front: {
     zoneId: 'peak_front',
-    u: 0.50,
-    v: 0.28, // 1.0 - 0.72 = 0.28 from top
-    w: 0.38,
-    h: 0.26,
-    rotation: 0
+    u: 0.500,
+    v: 0.294,
+    w: 0.40,
+    h: 0.28,
+    rotation: 0,
+    flipY: true
   },
   peak_back: {
     zoneId: 'peak_back',
-    u: 0.50,
-    v: 0.72, // 1.0 - 0.28 = 0.72 from top
-    w: 0.38,
-    h: 0.26,
-    rotation: Math.PI // 180 degrees
+    u: 0.519,
+    v: 0.689,
+    w: 0.40,
+    h: 0.28,
+    rotation: Math.PI,
+    flipY: true
   },
   peak_right: {
     zoneId: 'peak_right',
-    u: 0.72,
-    v: 0.50,
-    w: 0.38,
-    h: 0.26,
-    rotation: -Math.PI / 2 // -90 degrees
+    u: 0.697,
+    v: 0.497,
+    w: 0.40,
+    h: 0.28,
+    rotation: Math.PI / 2,
+    flipY: true
   },
   peak_left: {
     zoneId: 'peak_left',
-    u: 0.28,
-    v: 0.50,
-    w: 0.38,
-    h: 0.26,
-    rotation: Math.PI / 2 // +90 degrees
+    u: 0.291,
+    v: 0.503,
+    w: 0.40,
+    h: 0.28,
+    rotation: -Math.PI / 2,
+    flipY: true
   },
   valance_front: {
     zoneId: 'valance_front',
-    u: 0.50,
-    v: 0.065, // top edge
+    u: 0.501,
+    v: 0.069,
     w: 0.42,
     h: 0.075,
-    rotation: 0
+    rotation: 0,
+    flipY: true
   },
   valance_back: {
     zoneId: 'valance_back',
-    u: 0.50,
-    v: 0.935, // bottom edge
+    u: 0.546,
+    v: 0.894,
     w: 0.42,
     h: 0.075,
-    rotation: Math.PI
+    rotation: Math.PI,
+    flipY: true
   },
   valance_right: {
     zoneId: 'valance_right',
-    u: 0.935,
-    v: 0.50, // right edge
+    u: 0.919,
+    v: 0.502,
     w: 0.42,
     h: 0.075,
-    rotation: -Math.PI / 2
+    rotation: Math.PI / 2,
+    flipY: true
   },
   valance_left: {
     zoneId: 'valance_left',
-    u: 0.065,
-    v: 0.50, // left edge
+    u: 0.080,
+    v: 0.515,
     w: 0.42,
     h: 0.075,
-    rotation: Math.PI / 2
+    rotation: -Math.PI / 2,
+    flipY: true
   }
 }
 
@@ -85,8 +95,6 @@ class TextureSyncService {
   private masterCanvas: HTMLCanvasElement | null = null
   private masterCtx: CanvasRenderingContext2D | null = null
   private canvasTexture: THREE.CanvasTexture | null = null
-  private baseFabricImg: HTMLImageElement | null = null
-  private isImageLoaded = false
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -100,15 +108,7 @@ class TextureSyncService {
       this.canvasTexture.generateMipmaps = true
       this.canvasTexture.minFilter = THREE.LinearMipmapLinearFilter
       this.canvasTexture.magFilter = THREE.LinearFilter
-      this.canvasTexture.anisotropy = 8
-
-      // Preload base fabric normal / diffuse if desired
-      this.baseFabricImg = new Image()
-      this.baseFabricImg.crossOrigin = 'anonymous'
-      this.baseFabricImg.onload = () => {
-        this.isImageLoaded = true
-      }
-      this.baseFabricImg.src = '/textures/fabric_base.png'
+      this.canvasTexture.anisotropy = 16
     }
   }
 
@@ -120,9 +120,6 @@ class TextureSyncService {
     return this.masterCanvas
   }
 
-  /**
-   * Updates the master 3D canvas texture with current tent configuration and zone canvases
-   */
   updateMasterTexture(
     config: TentConfig,
     zoneCanvases: Record<string, HTMLCanvasElement>
@@ -133,13 +130,13 @@ class TextureSyncService {
     const w = this.masterCanvas.width
     const h = this.masterCanvas.height
 
-    // 1. Fill base tent color
+    // 1. Fill base tent fabric color
     ctx.fillStyle = config.fabricBaseColor
     ctx.fillRect(0, 0, w, h)
 
-    // 2. Add subtle procedural fabric grain overlay for realism
+    // 2. Subtle weave texture for realism
     ctx.save()
-    ctx.globalAlpha = 0.08
+    ctx.globalAlpha = 0.06
     ctx.fillStyle = '#000000'
     for (let y = 0; y < h; y += 4) {
       if (y % 8 === 0) {
@@ -148,7 +145,7 @@ class TextureSyncService {
     }
     ctx.restore()
 
-    // 3. Render each zone onto the master texture according to atlas mappings
+    // 3. Render each zone onto the master texture
     Object.entries(ZONE_ATLAS_MAPPINGS).forEach(([zoneKey, mapping]) => {
       const zoneId = zoneKey as ZoneId
       const zoneCanvas = zoneCanvases[zoneId]
@@ -164,6 +161,9 @@ class TextureSyncService {
       ctx.save()
       ctx.translate(centerX, centerY)
       ctx.rotate(mapping.rotation)
+      if (mapping.flipY) {
+        ctx.scale(1, -1)
+      }
 
       // Optional zone-specific background override
       if (zoneData?.backgroundColor && zoneData.backgroundColor !== config.fabricBaseColor) {
@@ -171,7 +171,7 @@ class TextureSyncService {
         ctx.fillRect(-targetW / 2, -targetH / 2, targetW, targetH)
       }
 
-      // Draw the customized zone canvas if available
+      // Draw the customized zone canvas right side up
       if (zoneCanvas && zoneData && zoneData.elements.length > 0) {
         ctx.drawImage(
           zoneCanvas,
@@ -185,7 +185,6 @@ class TextureSyncService {
       ctx.restore()
     })
 
-    // Notify Three.js that texture buffer changed
     this.canvasTexture.needsUpdate = true
   }
 }

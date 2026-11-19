@@ -1,8 +1,6 @@
 import React, { useState } from 'react'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
-import { TENT_MODELS } from '../../constants/tentData'
-import { ProductModelId } from '../../types/configurator'
-import { ShoppingBag, FileDown, RotateCcw, Sparkles, ChevronDown } from 'lucide-react'
+import { ShoppingBag, FileDown, RotateCcw, Sparkles, ChevronDown, Check } from 'lucide-react'
 
 interface HeaderProps {
   onExportPdf: () => void
@@ -11,11 +9,10 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
   const {
-    config,
     pricing,
     isPricingLoading,
     cart,
-    setModelId,
+    toggleCart,
     loadPreset,
     resetConfig
   } = useConfiguratorStore()
@@ -23,142 +20,114 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
   const [isPresetsOpen, setIsPresetsOpen] = useState(false)
 
   return (
-    <header className="h-16 px-4 md:px-6 bg-studio-950/95 border-b border-white/10 flex items-center justify-between z-30 sticky top-0 backdrop-blur-xl select-none">
-      {/* Brand & Title */}
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-gold-600 via-gold-500 to-amber-300 flex items-center justify-center font-black text-slate-950 text-sm shadow-glow-gold tracking-tight">
+    <header className="h-16 px-6 bg-white border-b border-slate-200 flex items-center justify-between z-30 sticky top-0 shadow-sm select-none">
+      {/* Brand & Store Nav */}
+      <div className="flex items-center space-x-8">
+        <div className="flex items-center space-x-2.5 cursor-pointer">
+          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center font-black text-white text-sm tracking-tight shadow-sm">
             MVP
           </div>
           <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="text-sm font-black tracking-tight text-white font-display">
-                CANOPY STUDIO
-              </span>
-              <span className="text-[9px] bg-gold-500/15 text-gold-400 border border-gold-500/30 px-1.5 py-0.2 rounded font-mono font-bold tracking-wider">
-                PRO 3D
-              </span>
-            </div>
-            <p className="text-[10px] text-studio-500 font-mono hidden sm:block">Commercial Interactive Configurator</p>
+            <span className="text-sm font-extrabold tracking-tight text-slate-900 font-sans uppercase">
+              MVP Visuals
+            </span>
+            <span className="text-[10px] text-slate-400 block -mt-0.5 font-medium">3D Custom Studio</span>
           </div>
         </div>
 
-        {/* Model Dimension Selector Segmented Pills */}
-        <div className="hidden lg:flex items-center bg-studio-900 p-1 rounded-xl border border-white/5 ml-4">
-          {(Object.keys(TENT_MODELS) as ProductModelId[]).map((mId) => {
-            const isSelected = config.modelId === mId
-            const m = TENT_MODELS[mId]
-            return (
-              <button
-                key={mId}
-                onClick={() => setModelId(mId)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  isSelected
-                    ? 'bg-gold-500 text-slate-950 shadow-glow-gold'
-                    : 'text-slate-400 hover:text-white hover:bg-studio-800'
-                }`}
-              >
-                <span>{mId}</span>
-              </button>
-            )
-          })}
-        </div>
+        {/* Shopify Theme Nav Links */}
+        <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
+          <span className="text-slate-900 border-b-2 border-slate-900 pb-0.5 cursor-pointer">Custom Canopy Tents</span>
+          <span className="hover:text-slate-900 transition-colors cursor-pointer">Table Covers</span>
+          <span className="hover:text-slate-900 transition-colors cursor-pointer">Feather Flags</span>
+          <span className="hover:text-slate-900 transition-colors cursor-pointer">Trade Show Displays</span>
+        </nav>
       </div>
 
-      {/* Center Actions: Brand Presets & Reset */}
-      <div className="flex items-center space-x-2">
-        {/* Presets Dropdown */}
+      {/* Right Actions: Presets, Live Price & Shopify Cart */}
+      <div className="flex items-center space-x-4">
+        {/* Sample Brand Presets */}
         <div className="relative">
           <button
             onClick={() => setIsPresetsOpen(!isPresetsOpen)}
-            className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-studio-850 text-slate-200 border border-white/10 hover:bg-studio-800 transition-all shadow-studio-card"
+            className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <Sparkles className="w-3.5 h-3.5 text-gold-400" />
-            <span className="hidden sm:inline">Brand Presets</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden sm:inline">Design Presets</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
           {isPresetsOpen && (
-            <div className="absolute top-full mt-2 left-0 w-52 bg-studio-900 border border-white/10 rounded-2xl shadow-2xl py-1.5 z-50 backdrop-blur-xl">
+            <div className="absolute top-full mt-2 right-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <button
                 onClick={() => {
                   loadPreset('tech_expo')
                   setIsPresetsOpen(false)
                 }}
-                className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-studio-800 flex flex-col transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex flex-col"
               >
-                <span className="font-bold text-white font-display">Tech Expo 2026</span>
-                <span className="text-[10px] text-studio-500 mt-0.5">10x10 • Royal Blue • Aluminum Frame</span>
+                <span className="font-bold text-slate-900">Tech Expo 2026</span>
+                <span className="text-[10px] text-slate-500">10x10 • Royal Blue • Aluminum Frame</span>
               </button>
               <button
                 onClick={() => {
                   loadPreset('brewery')
                   setIsPresetsOpen(false)
                 }}
-                className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-studio-800 flex flex-col transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex flex-col"
               >
-                <span className="font-bold text-white font-display">Timber & Hops Craft</span>
-                <span className="text-[10px] text-studio-500 mt-0.5">8x8 • Jet Black • Steel Hardware</span>
+                <span className="font-bold text-slate-900">Timber & Hops Craft</span>
+                <span className="text-[10px] text-slate-500">8x8 • Jet Black • Steel Frame</span>
               </button>
               <button
                 onClick={() => {
                   resetConfig()
                   setIsPresetsOpen(false)
                 }}
-                className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-studio-800 flex flex-col border-t border-white/5 transition-colors"
+                className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex flex-col border-t border-slate-100"
               >
-                <span className="font-bold text-gold-400 font-display">MVP Visuals Signature</span>
-                <span className="text-[10px] text-studio-500 mt-0.5">8x8 • Amber Gold Poly</span>
+                <span className="font-bold text-amber-600">Default MVP Amber</span>
+                <span className="text-[10px] text-slate-500">8x8 • Classic Gold Dye</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Reset Button */}
+        {/* Reset */}
         <button
           onClick={resetConfig}
-          title="Reset to Default"
-          className="p-2 text-slate-400 hover:text-white hover:bg-studio-850 rounded-xl transition-all border border-transparent hover:border-white/5"
+          title="Reset Customizer"
+          className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
-      </div>
 
-      {/* Right Actions: Live Price Pill, PDF, Shopify Cart */}
-      <div className="flex items-center space-x-3">
-        {/* Dynamic Price Telemetry */}
+        {/* Dynamic Price Block */}
         <div className="flex flex-col items-end">
-          <span className="text-[9px] uppercase tracking-widest font-mono text-studio-500 font-bold">
-            Live Quote
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total</span>
+          <span className="font-mono text-base font-extrabold text-slate-900">
+            {isPricingLoading ? '...' : `$${pricing.finalTotal.toFixed(2)}`}
           </span>
-          <div className="flex items-center space-x-1 font-mono text-base font-black text-gold-400">
-            {isPricingLoading ? (
-              <span className="text-xs text-studio-500 animate-pulse font-mono">Syncing...</span>
-            ) : (
-              <span>${pricing.finalTotal.toFixed(2)}</span>
-            )}
-          </div>
         </div>
 
-        {/* Export Production PDF Button */}
+        {/* Spec PDF Button */}
         <button
           onClick={onExportPdf}
-          title="Download Print Production Spec Sheet"
-          className="hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-studio-850 hover:bg-studio-800 border border-white/10 text-xs font-bold text-slate-200 transition-all shadow-studio-card"
+          className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
         >
-          <FileDown className="w-3.5 h-3.5 text-gold-400" />
-          <span>Spec Sheet</span>
+          <FileDown className="w-3.5 h-3.5 text-slate-500" />
+          <span>Spec PDF</span>
         </button>
 
-        {/* Add to Shopify Cart Button */}
+        {/* Shopify Cart Trigger Button */}
         <button
           onClick={onAddToCart}
-          className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-gold-500 to-amber-400 hover:from-gold-600 hover:to-amber-500 text-slate-950 font-black text-xs transition-all shadow-glow-gold active:scale-95 font-display"
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-black text-white font-bold text-xs transition-all shadow-sm active:scale-95"
         >
           <ShoppingBag className="w-4 h-4" />
-          <span className="hidden xs:inline">Add to Cart</span>
+          <span>Cart</span>
           {cart.length > 0 && (
-            <span className="w-5 h-5 rounded-full bg-slate-950 text-gold-400 text-[10px] flex items-center justify-center font-mono font-bold">
+            <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-900 text-[10px] flex items-center justify-center font-bold">
               {cart.length}
             </span>
           )}
