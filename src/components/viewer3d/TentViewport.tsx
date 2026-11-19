@@ -18,10 +18,8 @@ import {
   Building2,
   TreePine,
   Sun,
-  Palette,
-  Info,
   X,
-  Sparkles,
+  Sliders,
   Check
 } from 'lucide-react'
 
@@ -49,10 +47,10 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
   const mannequinGroupRef = useRef<THREE.Group | null>(null)
   const envBuilderRef = useRef<EnvironmentBuilder | null>(null)
 
-  // Meshes for exploded view and interaction
-  const fabricMeshRef = useRef<THREE.Mesh | null>(null)
-  const legMeshRef = useRef<THREE.Mesh | null>(null)
-  const mechanismMeshRef = useRef<THREE.Mesh | null>(null)
+  // Structural nodes for Exploded View
+  const fabricGroupRef = useRef<THREE.Object3D | null>(null)
+  const legGroupRef = useRef<THREE.Object3D | null>(null)
+  const mechanismGroupRef = useRef<THREE.Object3D | null>(null)
 
   // Accessory meshes
   const sandbagsMeshRef = useRef<THREE.Object3D | null>(null)
@@ -62,6 +60,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
 
   // Materials refs
   const fabricMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
+  const innerFabricMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
   const metalMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
 
   // Spherical camera navigation
@@ -88,8 +87,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     activeZoneId,
     setActiveZoneId,
     isAutoRotating,
-    toggleAutoRotate,
-    toggleAccessory
+    toggleAutoRotate
   } = useConfiguratorStore()
 
   // 1. Initialize Three.js Scene, Camera, Lighting & Controls
@@ -361,31 +359,43 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         const root = gltf.scene
         root.scale.set(modelMeta.scale[0], modelMeta.scale[1], modelMeta.scale[2])
 
-        fabricMeshRef.current = null
-        legMeshRef.current = null
-        mechanismMeshRef.current = null
+        // Locate top-level structural nodes for Exploded View
+        let fabNode: THREE.Object3D | null = null
+        let legNode: THREE.Object3D | null = null
+        let mechNode: THREE.Object3D | null = null
 
+        // 1. Exact name match
+        fabNode = root.getObjectByName('fabric') || null
+        legNode = root.getObjectByName('leg') || root.getObjectByName('leg5') || null
+        mechNode = root.getObjectByName('mechanism') || root.getObjectByName('mechanism3') || null
+
+        // 2. Child traversal fallback
+        if (!fabNode || !legNode || !mechNode) {
+          root.children.forEach((child) => {
+            const low = child.name.toLowerCase()
+            if (!fabNode && low.includes('fabric')) fabNode = child
+            if (!legNode && low.includes('leg')) legNode = child
+            if (!mechNode && low.includes('mechanism')) mechNode = child
+          })
+        }
+
+        fabricGroupRef.current = fabNode
+        legGroupRef.current = legNode
+        mechanismGroupRef.current = mechNode
+
+        // Traverse all meshes and assign high-precision PBR materials
         root.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh
             mesh.castShadow = true
             mesh.receiveShadow = true
 
-            const nameLow = mesh.name.toLowerCase()
-            if (nameLow.includes('fabric') || mesh.name === 'Mesh') {
-              fabricMeshRef.current = mesh
-            } else if (nameLow.includes('leg') || mesh.name === 'Mesh.001') {
-              legMeshRef.current = mesh
-            } else if (nameLow.includes('mechanism') || mesh.name === 'Mesh.002') {
-              mechanismMeshRef.current = mesh
-            }
-
             const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
 
             materials.forEach((mat, idx) => {
-              if (mat.name === 'fabric_Mat' || nameLow.includes('fabric') || mesh.name === 'Mesh') {
+              if (mat.name === 'fabric_Mat') {
+                // Outer custom printed canopy surface
                 const canvasTex = textureSyncService.getTexture()
-
                 const newFabricMat = new THREE.MeshStandardMaterial({
                   map: canvasTex,
                   roughness: 0.65,
@@ -393,21 +403,34 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
                   bumpScale: 0.02,
                   side: THREE.DoubleSide
                 })
-
                 if (Array.isArray(mesh.material)) {
                   mesh.material[idx] = newFabricMat
                 } else {
                   mesh.material = newFabricMat
                 }
                 fabricMaterialRef.current = newFabricMat
-              } else if (mat.name === 'Metal_mat' || nameLow.includes('leg') || nameLow.includes('mechanism')) {
+              } else if (mat.name === 'Inner_fabric') {
+                // Inner lining of canopy fabric
+                const innerMat = new THREE.MeshStandardMaterial({
+                  color: new THREE.Color(config.fabricBaseColor).multiplyScalar(0.75),
+                  roughness: 0.85,
+                  metalness: 0.02,
+                  side: THREE.DoubleSide
+                })
+                if (Array.isArray(mesh.material)) {
+                  mesh.material[idx] = innerMat
+                } else {
+                  mesh.material = innerMat
+                }
+                innerFabricMaterialRef.current = innerMat
+              } else if (mat.name === 'Metal_mat' || mesh.name.toLowerCase().includes('leg') || mesh.name.toLowerCase().includes('mechanism')) {
+                // Alloy / Steel Frame Hardware
                 const isAluminum = config.frameType === 'heavy_duty_aluminum'
                 const metalMat = new THREE.MeshStandardMaterial({
                   color: isAluminum ? 0xd1d5db : 0xffffff,
                   metalness: isAluminum ? 0.9 : 0.3,
                   roughness: isAluminum ? 0.25 : 0.4
                 })
-
                 if (Array.isArray(mesh.material)) {
                   mesh.material[idx] = metalMat
                 } else {
@@ -421,6 +444,9 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
 
         modelGroup.add(root)
         setIsLoadingModel(false)
+
+        // Reapply active exploded state if already exploded
+        applyExplodedOffsets(isExploded ? 1.0 : 0.0)
       },
       undefined,
       (error) => {
@@ -430,7 +456,15 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     )
   }, [config.modelId])
 
-  // 3. Update Hardware Alloy Material
+  // 3. Update Fabric Color on Inner Lining
+  useEffect(() => {
+    if (innerFabricMaterialRef.current) {
+      innerFabricMaterialRef.current.color.set(config.fabricBaseColor).multiplyScalar(0.75)
+      innerFabricMaterialRef.current.needsUpdate = true
+    }
+  }, [config.fabricBaseColor])
+
+  // 4. Update Hardware Alloy Material
   useEffect(() => {
     if (metalMaterialRef.current) {
       const isAluminum = config.frameType === 'heavy_duty_aluminum'
@@ -441,7 +475,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [config.frameType])
 
-  // 4. Load & Dynamically Attach Accessories
+  // 5. Load & Dynamically Attach Accessories
   useEffect(() => {
     if (!accessoriesGroupRef.current) return
     const accGroup = accessoriesGroupRef.current
@@ -455,13 +489,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     if (hasSandbags && !sandbagsMeshRef.current) {
       loader.load('/models/accessory_sandbags.glb', (gltf) => {
         const obj = gltf.scene
-        // Snap-on drop animation
         obj.position.y = 0.8
         const startTime = performance.now()
         const animateDrop = () => {
           const elapsed = (performance.now() - startTime) / 1000
           const t = Math.min(1, elapsed / 0.45)
-          // Elastic bounce down to 0
           obj.position.y = 0.8 * (1 - t) * Math.cos(t * Math.PI * 2.5)
           if (t < 1) {
             requestAnimationFrame(animateDrop)
@@ -516,7 +548,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [config.accessories])
 
-  // 5. Toggle Human Scale Mannequin
+  // 6. Toggle Human Scale Mannequin
   useEffect(() => {
     if (!mannequinGroupRef.current) return
     const mGroup = mannequinGroupRef.current
@@ -534,20 +566,34 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [showHumanScale])
 
-  // 6. Handle Exploded View Animation
+  // 7. Exploded View Smooth Interpolation & Camera Reframing
   useEffect(() => {
     let animId: number
     const target = isExploded ? 1.0 : 0.0
 
+    // Smoothly reframe camera when exploded
+    if (controlsRef.current) {
+      if (isExploded) {
+        controlsRef.current.target.set(0, 1.45, 0)
+        targetRadiusRef.current = 4.3
+        targetPhiRef.current = Math.PI / 2.35
+      } else {
+        controlsRef.current.target.set(0, 1.05, 0)
+        targetRadiusRef.current = 3.6
+        targetPhiRef.current = Math.PI / 2.3
+      }
+      isTransitioningRef.current = true
+    }
+
     const step = () => {
       setExplodedProgress((prev) => {
         const diff = target - prev
-        if (Math.abs(diff) < 0.02) {
+        if (Math.abs(diff) < 0.015) {
           const finalVal = target
           applyExplodedOffsets(finalVal)
           return finalVal
         }
-        const next = prev + diff * 0.12
+        const next = prev + diff * 0.14
         applyExplodedOffsets(next)
         animId = requestAnimationFrame(step)
         return next
@@ -558,19 +604,25 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     return () => cancelAnimationFrame(animId)
   }, [isExploded])
 
+  /**
+   * Applies clean 3-tier mechanical explosion:
+   * Tier 3: Unified Canopy Cover (Peak + Valance, Inner + Outer) lifts cleanly (+0.82m)
+   * Tier 2: Scissor Lattice Truss Mechanism suspends in the middle (+0.32m)
+   * Tier 1: Telescoping Upright Legs remain firmly grounded (0.00m)
+   */
   const applyExplodedOffsets = (progress: number) => {
-    if (fabricMeshRef.current) {
-      fabricMeshRef.current.position.y = progress * 0.95
+    if (fabricGroupRef.current) {
+      fabricGroupRef.current.position.y = progress * 0.82
     }
-    if (mechanismMeshRef.current) {
-      mechanismMeshRef.current.position.y = progress * 0.38
+    if (mechanismGroupRef.current) {
+      mechanismGroupRef.current.position.y = progress * 0.32
     }
-    if (legMeshRef.current) {
-      legMeshRef.current.position.y = -progress * 0.05
+    if (legGroupRef.current) {
+      legGroupRef.current.position.y = 0.0
     }
   }
 
-  // 7. Update Auto-Rotation
+  // 8. Update Auto-Rotation
   useEffect(() => {
     if (controlsRef.current) {
       controlsRef.current.autoRotate = isAutoRotating
@@ -578,7 +630,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [isAutoRotating])
 
-  // 8. Rotate Smoothly to Side Function
+  // 9. Rotate Smoothly to Side Function
   const rotateToSide = useCallback((side: TentSide) => {
     setActiveSide(side)
 
@@ -603,15 +655,15 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
 
     targetThetaRef.current = targetAzimuth
-    targetPhiRef.current = Math.PI / 2.3
-    targetRadiusRef.current = 3.6
+    targetPhiRef.current = isExploded ? Math.PI / 2.35 : Math.PI / 2.3
+    targetRadiusRef.current = isExploded ? 4.3 : 3.6
     isTransitioningRef.current = true
 
     const correspondingZoneId = `peak_${side}` as ZoneId
     if (activeZoneId !== correspondingZoneId && !activeZoneId.startsWith('valance_')) {
       setActiveZoneId(correspondingZoneId)
     }
-  }, [isAutoRotating, toggleAutoRotate, activeZoneId, setActiveZoneId])
+  }, [isAutoRotating, toggleAutoRotate, activeZoneId, setActiveZoneId, isExploded])
 
   // Switch Environment Handler
   const handleSwitchEnvironment = (env: EnvironmentType) => {
@@ -691,6 +743,30 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
               <div>• Person Height: 1.80m (5'11")</div>
               <div>• Valance Clearance: 2.10m (7'0")</div>
               <div>• Peak Apex Height: 3.40m (11'2")</div>
+            </div>
+          </div>
+        )}
+
+        {/* Exploded View 3-Tier Layer Annotation Legend */}
+        {isExploded && (
+          <div className="px-3 py-2.5 rounded-xl bg-slate-900/95 text-white backdrop-blur-md border border-amber-500/50 shadow-xl text-[11px] space-y-1.5 animate-in fade-in slide-in-from-left-2 duration-200">
+            <div className="flex items-center justify-between text-amber-400 font-black text-[10px] uppercase tracking-wider">
+              <span>Exploded Mechanical Assembly</span>
+              <span className="text-white/60">3 Tiers</span>
+            </div>
+            <div className="text-[10px] font-mono space-y-1">
+              <div className="flex items-center space-x-1.5 text-amber-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span>Tier 3: 600D Weather-Seal Canopy Top (+0.82m)</span>
+              </div>
+              <div className="flex items-center space-x-1.5 text-slate-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span>Tier 2: Accordion Scissor Lattice Mechanism (+0.32m)</span>
+              </div>
+              <div className="flex items-center space-x-1.5 text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                <span>Tier 1: Telescoping Upright Legs & Footpads (0.00m)</span>
+              </div>
             </div>
           </div>
         )}
@@ -790,15 +866,15 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         {/* Exploded Engineering View Toggle */}
         <button
           onClick={() => setIsExploded(!isExploded)}
-          title="Exploded View (Inspect Bars, Fabric, Rods)"
+          title={isExploded ? 'Reassemble Tent Assembly' : 'Explode View into 3 Tiers (Canopy, Truss, Legs)'}
           className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border backdrop-blur-md transition-all shadow-sm text-xs font-bold ${
             isExploded
-              ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-extrabold'
+              ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-extrabold ring-2 ring-amber-400/50'
               : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{isExploded ? 'Collapsed' : 'Exploded View'}</span>
+          <span className="hidden sm:inline">{isExploded ? 'Reassemble Tent' : 'Exploded View'}</span>
         </button>
       </div>
 
