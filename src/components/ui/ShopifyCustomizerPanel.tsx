@@ -24,7 +24,10 @@ import {
   Info,
   Receipt,
   ChevronRight,
-  PanelRightClose
+  PanelRightClose,
+  Copy,
+  Trash2,
+  Layers
 } from 'lucide-react'
 import { formatCurrency, formatInvoiceAmount } from '../../utils/gstUtils'
 
@@ -51,7 +54,10 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
     setModelId,
     setFrameType,
     setFabricBaseColor,
-    toggleAccessory
+    toggleAccessory,
+    copyZoneToAllSides,
+    clearAllZones,
+    clearZone
   } = useConfiguratorStore()
 
   // Active side tab
@@ -238,72 +244,177 @@ export const ShopifyCustomizerPanel: React.FC<ShopifyCustomizerPanelProps> = ({
         </div>
 
         {/* 4. Interactive 2D Prepress Surface Customizer */}
-        <div className="space-y-3 pt-2 border-t border-slate-200">
+        <div className="space-y-3.5 pt-2 border-t border-slate-200">
           <div className="flex items-center justify-between">
             <div>
               <label className="text-xs font-bold uppercase tracking-wider text-slate-900 block">
                 4. Customize Print Surfaces (4 Peaks & 4 Valances)
               </label>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Edge-to-edge 4K dye sublimation on 600D heavy-duty polyester.
+                Edge-to-edge 4K dye sublimation. Click any surface to inspect in 3D.
               </p>
             </div>
 
             {/* Customization Count Badge */}
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-slate-900 text-amber-400 border border-slate-700 shadow-xs">
               {pricing.customizedZonesCount} / 8 printed
             </span>
           </div>
 
-          {/* 4-Way Side Selector (Front / Right / Back / Left) */}
-          <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-xl">
-            {(['front', 'right', 'back', 'left'] as SideKey[]).map((side) => {
-              const isSelected = selectedSide === side
-              const peakCount = config.zones[`peak_${side}` as ZoneId]?.elements.length || 0
-              const valanceCount = config.zones[`valance_${side}` as ZoneId]?.elements.length || 0
-              const totalLayers = peakCount + valanceCount
+          {/* Quick Replication & Reset Productivity Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80">
+            <span className="text-[10px] font-bold text-amber-900 uppercase flex items-center space-x-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Bulk Tools:</span>
+            </span>
+            <button
+              onClick={() => copyZoneToAllSides('peak_front')}
+              disabled={(config.zones['peak_front']?.elements.length || 0) === 0}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                (config.zones['peak_front']?.elements.length || 0) > 0
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs cursor-pointer'
+                  : 'bg-amber-200/60 text-amber-800/50 cursor-not-allowed'
+              }`}
+              title="Copy Front Peak graphics to Right, Back, and Left peaks"
+            >
+              <Copy className="w-3 h-3" />
+              <span>Copy Front to All 4 Peaks</span>
+            </button>
 
-              return (
-                <button
-                  key={side}
-                  onClick={() => handleSelectSide(side, activeSurfaceType)}
-                  className={`py-2 px-2 rounded-lg text-xs font-bold capitalize transition-all ${
-                    isSelected
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="block">{side}</span>
-                  <span className={`text-[9px] block ${totalLayers > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
-                    {totalLayers > 0 ? `${totalLayers} artwork` : 'Blank'}
-                  </span>
-                </button>
-              )
-            })}
+            <button
+              onClick={() => copyZoneToAllSides('valance_front')}
+              disabled={(config.zones['valance_front']?.elements.length || 0) === 0}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                (config.zones['valance_front']?.elements.length || 0) > 0
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs cursor-pointer'
+                  : 'bg-amber-200/60 text-amber-800/50 cursor-not-allowed'
+              }`}
+              title="Copy Front Valance graphics to Right, Back, and Left valances"
+            >
+              <Copy className="w-3 h-3" />
+              <span>Copy Front to All 4 Valances</span>
+            </button>
+
+            {pricing.customizedZonesCount > 0 && (
+              <button
+                onClick={clearAllZones}
+                className="flex items-center space-x-1 px-2 py-1 rounded-lg text-[10px] font-bold text-red-600 hover:bg-red-100 transition-all ml-auto"
+                title="Clear all 8 surfaces"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Reset All</span>
+              </button>
+            )}
           </div>
 
-          {/* Peak vs Valance Selector */}
-          <div className="flex space-x-2 pt-1">
-            <button
-              onClick={() => handleSelectSide(selectedSide, 'peak')}
-              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
-                activeSurfaceType === 'peak'
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Roof Peak (+{formatCurrency(isINR ? 950 : 45, currency)})
-            </button>
-            <button
-              onClick={() => handleSelectSide(selectedSide, 'valance')}
-              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
-                activeSurfaceType === 'valance'
-                  ? 'border-slate-900 bg-slate-900 text-white'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Drop Valance (+{formatCurrency(isINR ? 550 : 25, currency)})
-            </button>
+          {/* 8-Surface Selection Matrix */}
+          <div className="space-y-2.5">
+            {/* 1. Roof Peaks (4 Sloped Panels) */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1.5 px-0.5">
+                <span className="flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span>Roof Peaks (+{formatCurrency(isINR ? 950 : 45, currency)} ea)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Sloped High-Vis Panels</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['front', 'right', 'back', 'left'] as SideKey[]).map((side) => {
+                  const zId = `peak_${side}` as ZoneId
+                  const isSelected = activeZoneId === zId
+                  const count = config.zones[zId]?.elements.length || 0
+                  return (
+                    <button
+                      key={zId}
+                      onClick={() => setActiveZoneId(zId)}
+                      className={`p-2 rounded-xl text-center border transition-all relative ${
+                        isSelected
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-md ring-2 ring-slate-900/30'
+                          : 'border-slate-200 hover:border-slate-300 bg-white text-slate-800'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold capitalize">{side} Peak</div>
+                      <div className="mt-0.5">
+                        {count > 0 ? (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isSelected ? 'bg-amber-400 text-slate-900 font-black' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            ✓ {count} {count === 1 ? 'art' : 'arts'}
+                          </span>
+                        ) : (
+                          <span className={`text-[9px] ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
+                            Blank
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 2. Drop Valances (4 Hanging Trim Panels) */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1.5 px-0.5">
+                <span className="flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Drop Valances (+{formatCurrency(isINR ? 550 : 25, currency)} ea)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Eye-Level Border Strips</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['front', 'right', 'back', 'left'] as SideKey[]).map((side) => {
+                  const zId = `valance_${side}` as ZoneId
+                  const isSelected = activeZoneId === zId
+                  const count = config.zones[zId]?.elements.length || 0
+                  return (
+                    <button
+                      key={zId}
+                      onClick={() => setActiveZoneId(zId)}
+                      className={`p-2 rounded-xl text-center border transition-all relative ${
+                        isSelected
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-md ring-2 ring-slate-900/30'
+                          : 'border-slate-200 hover:border-slate-300 bg-white text-slate-800'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold capitalize">{side} Valance</div>
+                      <div className="mt-0.5">
+                        {count > 0 ? (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isSelected ? 'bg-amber-400 text-slate-900 font-black' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            ✓ {count} {count === 1 ? 'art' : 'arts'}
+                          </span>
+                        ) : (
+                          <span className={`text-[9px] ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
+                            Blank
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Active Editing Surface Header & Clear Button */}
+          <div className="flex items-center justify-between pt-1 px-1">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-xs font-black text-slate-900 uppercase tracking-tight">
+                Now Customizing: {ZONES_METADATA[activeZoneId]?.label || activeZoneId}
+              </span>
+            </div>
+            {(config.zones[activeZoneId]?.elements.length || 0) > 0 && (
+              <button
+                onClick={() => clearZone(activeZoneId)}
+                className="text-[11px] text-red-600 hover:text-red-700 font-bold flex items-center space-x-1 hover:underline"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Clear Surface</span>
+              </button>
+            )}
           </div>
 
           {/* Clean Embedded 2D Surface Editor */}

@@ -935,6 +935,42 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     }
   }
 
+  // 10. Automatically rotate 3D camera to face the activeZoneId side & pitch to surface
+  useEffect(() => {
+    if (!activeZoneId) return
+    const parts = activeZoneId.split('_')
+    const surface = parts[0] // 'peak' | 'valance'
+    const side = parts[1] as TentSide // 'front' | 'right' | 'back' | 'left'
+
+    if (side) {
+      setActiveSide(side)
+      if (controlsRef.current) {
+        controlsRef.current.autoRotate = false
+      }
+
+      let targetAngle = 0
+      switch (side) {
+        case 'front':
+          targetAngle = 0
+          break
+        case 'right':
+          targetAngle = Math.PI / 2
+          break
+        case 'back':
+          targetAngle = Math.PI
+          break
+        case 'left':
+          targetAngle = (3 * Math.PI) / 2
+          break
+      }
+
+      targetThetaRef.current = targetAngle
+      targetPhiRef.current = surface === 'valance' ? Math.PI / 2.15 : Math.PI / 2.45
+      targetRadiusRef.current = 3.6
+      isTransitioningRef.current = true
+    }
+  }, [activeZoneId])
+
   // Camera side rotation helper
   const rotateToSide = (side: TentSide) => {
     setActiveSide(side)

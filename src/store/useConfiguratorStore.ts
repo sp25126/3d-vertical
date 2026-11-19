@@ -60,6 +60,8 @@ interface ConfiguratorState {
   removeElement: (zoneId: ZoneId, elementId: string) => void
   setZoneBackgroundColor: (zoneId: ZoneId, color?: string) => void
   clearZone: (zoneId: ZoneId) => void
+  copyZoneToAllSides: (sourceZoneId: ZoneId) => void
+  clearAllZones: () => void
   resetConfig: () => void
   loadPreset: (presetKey: string) => void
   undo: () => void
@@ -264,6 +266,40 @@ export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
       }
     }
     set({ config: newConfig, selectedElementId: null })
+    get().fetchPricing()
+  },
+
+  copyZoneToAllSides: (sourceZoneId) => {
+    const current = get().config
+    const sourceZone = current.zones[sourceZoneId]
+    if (!sourceZone || sourceZone.elements.length === 0) return
+
+    const isPeak = sourceZoneId.startsWith('peak')
+    const targetZones: ZoneId[] = isPeak
+      ? ['peak_front', 'peak_right', 'peak_back', 'peak_left']
+      : ['valance_front', 'valance_right', 'valance_back', 'valance_left']
+
+    const updatedZones = { ...current.zones }
+    targetZones.forEach((zId) => {
+      const clonedElements = sourceZone.elements.map((el) => ({
+        ...el,
+        id: `el-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`
+      }))
+      updatedZones[zId] = {
+        zoneId: zId,
+        backgroundColor: sourceZone.backgroundColor,
+        elements: clonedElements
+      }
+    })
+
+    set({ config: { ...current, zones: updatedZones } })
+    get().fetchPricing()
+  },
+
+  clearAllZones: () => {
+    const current = get().config
+    const clearedZones = { ...DEFAULT_ZONES }
+    set({ config: { ...current, zones: clearedZones }, selectedElementId: null })
     get().fetchPricing()
   },
 

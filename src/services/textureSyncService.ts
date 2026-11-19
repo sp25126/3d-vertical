@@ -24,7 +24,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.40,
     h: 0.28,
     rotation: 0,
-    flipY: true
+    flipY: false
   },
   peak_back: {
     zoneId: 'peak_back',
@@ -33,7 +33,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.40,
     h: 0.28,
     rotation: Math.PI,
-    flipY: true
+    flipY: false
   },
   peak_right: {
     zoneId: 'peak_right',
@@ -42,7 +42,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.40,
     h: 0.28,
     rotation: Math.PI / 2,
-    flipY: true
+    flipY: false
   },
   peak_left: {
     zoneId: 'peak_left',
@@ -51,7 +51,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.40,
     h: 0.28,
     rotation: -Math.PI / 2,
-    flipY: true
+    flipY: false
   },
   valance_front: {
     zoneId: 'valance_front',
@@ -60,7 +60,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.42,
     h: 0.075,
     rotation: 0,
-    flipY: true
+    flipY: false
   },
   valance_back: {
     zoneId: 'valance_back',
@@ -69,7 +69,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.42,
     h: 0.075,
     rotation: Math.PI,
-    flipY: true
+    flipY: false
   },
   valance_right: {
     zoneId: 'valance_right',
@@ -78,7 +78,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.42,
     h: 0.075,
     rotation: Math.PI / 2,
-    flipY: true
+    flipY: false
   },
   valance_left: {
     zoneId: 'valance_left',
@@ -87,7 +87,7 @@ export const ZONE_ATLAS_MAPPINGS: Record<ZoneId, ZoneAtlasMapping> = {
     w: 0.42,
     h: 0.075,
     rotation: -Math.PI / 2,
-    flipY: true
+    flipY: false
   }
 }
 

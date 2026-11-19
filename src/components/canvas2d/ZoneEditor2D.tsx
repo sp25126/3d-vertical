@@ -74,7 +74,7 @@ export const ZoneEditor2D: React.FC = () => {
 
   // 1. Render 2D Canvas for this Zone
   const renderZoneToCanvas = useCallback(
-    (canvas: HTMLCanvasElement, zoneData: typeof currentZone) => {
+    (canvas: HTMLCanvasElement, zoneData: typeof currentZone, isInteractive: boolean = false) => {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
@@ -86,23 +86,25 @@ export const ZoneEditor2D: React.FC = () => {
       ctx.fillStyle = zoneData.backgroundColor || config.fabricBaseColor
       ctx.fillRect(0, 0, w, h)
 
-      // Draw Safety Bleed Margins
-      ctx.save()
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
-      ctx.setLineDash([6, 6])
-      ctx.lineWidth = 2
+      // Draw Safety Bleed Margins (ONLY on interactive screen editor, NEVER on 3D master texture)
+      if (isInteractive) {
+        ctx.save()
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+        ctx.setLineDash([6, 6])
+        ctx.lineWidth = 2
 
-      if (isPeak) {
-        ctx.beginPath()
-        ctx.moveTo(w / 2, 28)
-        ctx.lineTo(w - 28, h - 28)
-        ctx.lineTo(28, h - 28)
-        ctx.closePath()
-        ctx.stroke()
-      } else {
-        ctx.strokeRect(24, 18, w - 48, h - 36)
+        if (isPeak) {
+          ctx.beginPath()
+          ctx.moveTo(w / 2, 28)
+          ctx.lineTo(w - 28, h - 28)
+          ctx.lineTo(28, h - 28)
+          ctx.closePath()
+          ctx.stroke()
+        } else {
+          ctx.strokeRect(24, 18, w - 48, h - 36)
+        }
+        ctx.restore()
       }
-      ctx.restore()
 
       // Render Elements
       zoneData.elements.forEach((el) => {
@@ -138,7 +140,7 @@ export const ZoneEditor2D: React.FC = () => {
             img.src = el.url
             img.onload = () => {
               imageElementsMapRef.current[el.id] = img
-              renderZoneToCanvas(canvas, zoneData)
+              renderZoneToCanvas(canvas, zoneData, isInteractive)
             }
           } else if (img.complete) {
             const aspect = (img.naturalWidth || 100) / (img.naturalHeight || 100)
@@ -149,8 +151,8 @@ export const ZoneEditor2D: React.FC = () => {
           }
         }
 
-        // Bounding Box on Selection
-        if (el.id === selectedElementId) {
+        // Bounding Box on Selection (ONLY for interactive screen editor, NEVER on 3D fabric)
+        if (isInteractive && el.id === selectedElementId) {
           ctx.restore()
           ctx.save()
           ctx.translate(centerX, centerY)
@@ -185,8 +187,8 @@ export const ZoneEditor2D: React.FC = () => {
         ctx.restore()
       })
 
-      // Snap Crosshairs
-      if (isDraggingRef.current && isSnappingCenter) {
+      // Snap Crosshairs (ONLY for interactive screen editor)
+      if (isInteractive && isDraggingRef.current && isSnappingCenter) {
         ctx.save()
         ctx.strokeStyle = '#0284C7'
         ctx.lineWidth = 1.5
@@ -213,11 +215,11 @@ export const ZoneEditor2D: React.FC = () => {
         zoneCanvasesCacheRef.current[zoneId] = c
       }
       const c = zoneCanvasesCacheRef.current[zoneId]
-      renderZoneToCanvas(c, config.zones[zoneId])
+      renderZoneToCanvas(c, config.zones[zoneId], false) // Clean 3D texture
     })
 
     if (canvasRef.current) {
-      renderZoneToCanvas(canvasRef.current, currentZone)
+      renderZoneToCanvas(canvasRef.current, currentZone, true) // Interactive canvas with UI handles
     }
 
     textureSyncService.updateMasterTexture(config, zoneCanvasesCacheRef.current)
