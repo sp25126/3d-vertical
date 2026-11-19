@@ -1,107 +1,142 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
-import { TENT_MODELS, ZONES_METADATA, FRAME_TYPES } from '../../constants/tentData'
 import { textureSyncService } from '../../services/textureSyncService'
+import { TENT_MODELS, ZONES_METADATA } from '../../constants/tentData'
 import { ZoneId } from '../../types/configurator'
+import { EnvironmentBuilder, EnvironmentType } from '../../utils/environmentBuilder'
 import {
+  Loader2,
+  Compass,
   RotateCcw,
   Maximize2,
   Minimize2,
-  Compass,
-  Loader2,
-  Eye,
-  Camera
+  Layers,
+  User,
+  Building2,
+  TreePine,
+  Sun,
+  Palette,
+  Info,
+  X,
+  Sparkles,
+  Check
 } from 'lucide-react'
+
+interface TentViewportProps {
+  onCaptureSnapshotRef?: (fn: () => string) => void
+}
 
 type TentSide = 'front' | 'right' | 'back' | 'left'
 
-interface TentViewportProps {
-  onCaptureSnapshotRef?: (captureFn: () => string) => void
+interface PartInspectionData {
+  name: string
+  category: string
+  specs: Array<{ label: string; value: string }>
+  description: string
 }
 
 export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const sceneRef = useRef<THREE.Scene | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const sceneRef = useRef<THREE.Scene | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const controlsRef = useRef<OrbitControls | null>(null)
   const modelGroupRef = useRef<THREE.Group | null>(null)
+  const accessoriesGroupRef = useRef<THREE.Group | null>(null)
+  const mannequinGroupRef = useRef<THREE.Group | null>(null)
+  const envBuilderRef = useRef<EnvironmentBuilder | null>(null)
+
+  // Meshes for exploded view and interaction
+  const fabricMeshRef = useRef<THREE.Mesh | null>(null)
+  const legMeshRef = useRef<THREE.Mesh | null>(null)
+  const mechanismMeshRef = useRef<THREE.Mesh | null>(null)
+
+  // Accessory meshes
+  const sandbagsMeshRef = useRef<THREE.Object3D | null>(null)
+  const rollerBagMeshRef = useRef<THREE.Object3D | null>(null)
+  const stakesMeshRef = useRef<THREE.Object3D | null>(null)
+  const mannequinMeshRef = useRef<THREE.Object3D | null>(null)
+
+  // Materials refs
   const fabricMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
   const metalMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null)
 
-  const [isLoadingModel, setIsLoadingModel] = useState(true)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  // Spherical camera navigation
+  const currentThetaRef = useRef<number>(0)
+  const currentPhiRef = useRef<number>(Math.PI / 2.3)
+  const currentRadiusRef = useRef<number>(3.6)
+  const targetThetaRef = useRef<number>(0)
+  const targetPhiRef = useRef<number>(Math.PI / 2.3)
+  const targetRadiusRef = useRef<number>(3.6)
+  const isTransitioningRef = useRef<boolean>(false)
+
+  // Component UI State
   const [activeSide, setActiveSide] = useState<TentSide>('front')
+  const [isLoadingModel, setIsLoadingModel] = useState<boolean>(true)
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
+  const [activeEnv, setActiveEnv] = useState<EnvironmentType>('studio')
+  const [showHumanScale, setShowHumanScale] = useState<boolean>(false)
+  const [isExploded, setIsExploded] = useState<boolean>(false)
+  const [explodedProgress, setExplodedProgress] = useState<number>(0)
+  const [inspectedPart, setInspectedPart] = useState<PartInspectionData | null>(null)
 
   const {
     config,
     activeZoneId,
     setActiveZoneId,
     isAutoRotating,
-    toggleAutoRotate
+    toggleAutoRotate,
+    toggleAccessory
   } = useConfiguratorStore()
 
-  // Spherical camera choreography refs
-  const currentThetaRef = useRef<number>(0)
-  const targetThetaRef = useRef<number>(0)
-  const currentPhiRef = useRef<number>(Math.PI / 2.3)
-  const targetPhiRef = useRef<number>(Math.PI / 2.3)
-  const currentRadiusRef = useRef<number>(3.6)
-  const targetRadiusRef = useRef<number>(3.6)
-  const isTransitioningRef = useRef<boolean>(false)
-
-  // 1. Initialize Three.js scene (Clean Shopify Studio)
+  // 1. Initialize Three.js Scene, Camera, Lighting & Controls
   useEffect(() => {
-    if (!containerRef.current) return
-
     const container = containerRef.current
+    if (!container) return
+
     const width = container.clientWidth
     const height = container.clientHeight
 
-    // Scene with clean, light studio aesthetic (Shopify Dawn standard)
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color('#F8FAFC') // Clean Slate 50
     sceneRef.current = scene
+    scene.background = new THREE.Color(0xf8fafc)
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 50)
-    camera.position.set(0, 1.8, 3.6)
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100)
+    camera.position.set(0, 1.45, 3.6)
     cameraRef.current = camera
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
+      alpha: true,
       preserveDrawingBuffer: true,
       powerPreference: 'high-performance'
     })
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.15
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
-    // OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
-    controls.dampingFactor = 0.05
-    controls.minDistance = 1.8
-    controls.maxDistance = 8.0
-    controls.maxPolarAngle = Math.PI / 2 + 0.03
-    controls.target.set(0, 1.25, 0)
+    controls.dampingFactor = 0.06
+    controls.minDistance = 1.4
+    controls.maxDistance = 10.0
+    controls.maxPolarAngle = Math.PI / 2 - 0.01 // Prevent dipping beneath ground
+    controls.target.set(0, 1.05, 0)
     controlsRef.current = controls
 
-    // On user drag, update current spherical angles so animations don't snap
     controls.addEventListener('start', () => {
       isTransitioningRef.current = false
     })
 
-    // Lighting (Luminous E-Commerce Studio)
+    // Lighting Setup
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.1)
     scene.add(ambientLight)
 
@@ -114,8 +149,6 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     keyLight.castShadow = true
     keyLight.shadow.mapSize.width = 2048
     keyLight.shadow.mapSize.height = 2048
-    keyLight.shadow.camera.near = 0.5
-    keyLight.shadow.camera.far = 25
     keyLight.shadow.bias = -0.0001
     scene.add(keyLight)
 
@@ -127,36 +160,32 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     backRimLight.position.set(0, 6, -5)
     scene.add(backRimLight)
 
-    // Soft Studio Contact Shadow
-    const shadowGeo = new THREE.PlaneGeometry(12, 12)
-    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.18 })
-    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
-    shadowMesh.rotation.x = -Math.PI / 2
-    shadowMesh.position.y = -0.005
-    shadowMesh.receiveShadow = true
-    scene.add(shadowMesh)
+    // Contextual Environment Builder
+    const envBuilder = new EnvironmentBuilder()
+    envBuilderRef.current = envBuilder
+    envBuilder.setEnvironment('studio')
+    scene.add(envBuilder.getGroup())
 
-    // Clean Studio Floor Rings
-    const ringGeo = new THREE.RingGeometry(1.6, 1.615, 64)
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, side: THREE.DoubleSide })
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat)
-    ringMesh.rotation.x = -Math.PI / 2
-    ringMesh.position.y = 0.001
-    scene.add(ringMesh)
-
-    // Model Group
+    // Model Groups
     const modelGroup = new THREE.Group()
     scene.add(modelGroup)
     modelGroupRef.current = modelGroup
+
+    const accessoriesGroup = new THREE.Group()
+    scene.add(accessoriesGroup)
+    accessoriesGroupRef.current = accessoriesGroup
+
+    const mannequinGroup = new THREE.Group()
+    scene.add(mannequinGroup)
+    mannequinGroupRef.current = mannequinGroup
 
     // Animation Loop
     let animationFrameId: number
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate)
 
-      // Smooth shortest-path spherical camera interpolation
+      // Smooth camera interpolation
       if (isTransitioningRef.current && cameraRef.current && controlsRef.current) {
-        // Calculate shortest angular path for theta
         let diff = targetThetaRef.current - currentThetaRef.current
         while (diff < -Math.PI) diff += Math.PI * 2
         while (diff > Math.PI) diff -= Math.PI * 2
@@ -182,7 +211,6 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         }
       } else if (controlsRef.current && cameraRef.current) {
         controlsRef.current.update()
-        // Sync internal spherical coordinates with current manual orbit position
         const target = controlsRef.current.target
         const offset = new THREE.Vector3().subVectors(cameraRef.current.position, target)
         currentRadiusRef.current = offset.length()
@@ -196,7 +224,6 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
     animate()
 
-    // Resize
     const handleResize = () => {
       if (!container || !rendererRef.current || !cameraRef.current) return
       const w = container.clientWidth
@@ -207,7 +234,95 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
     window.addEventListener('resize', handleResize)
 
-    // Snapshot Ref
+    // Raycasting for interactive 3D click-to-inspect
+    const raycaster = new THREE.Raycaster()
+    const mouse = new THREE.Vector2()
+
+    const handleClick = (event: MouseEvent) => {
+      if (!rendererRef.current || !cameraRef.current || !modelGroupRef.current) return
+      const rect = rendererRef.current.domElement.getBoundingClientRect()
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+      raycaster.setFromCamera(mouse, cameraRef.current)
+      const intersects = raycaster.intersectObjects([
+        ...modelGroupRef.current.children,
+        ...accessoriesGroup.children,
+        ...mannequinGroup.children
+      ], true)
+
+      if (intersects.length > 0) {
+        const hit = intersects[0].object as THREE.Mesh
+        const hitName = hit.name.toLowerCase()
+
+        if (hitName.includes('fabric') || hit.parent?.name.toLowerCase().includes('fabric')) {
+          setInspectedPart({
+            name: '600D Custom Roof Canopy & Valance',
+            category: 'Textile Engineering',
+            specs: [
+              { label: 'Textile Fabric', value: '600D PU Polyester (280 GSM)' },
+              { label: 'Printing Tech', value: '4K Edge-to-Edge Dye-Sublimation' },
+              { label: 'Fire Rating', value: 'CPAI-84 & NFPA-701 Retardant' },
+              { label: 'Water Column', value: '3000mm Hydrostatic Head Sealed' }
+            ],
+            description: 'Heavy-duty 600 Denier oxford polyester fabric with internal polyurethane weather seal, heat-sealed double seams, and high-frequency corner reinforcement.'
+          })
+        } else if (hitName.includes('leg') || hit.parent?.name.toLowerCase().includes('leg')) {
+          const isAlloy = config.frameType === 'heavy_duty_aluminum'
+          setInspectedPart({
+            name: isAlloy ? '50mm Hexagonal Aircraft Aluminum Leg' : 'Commercial White Steel Telescoping Leg',
+            category: 'Frame Hardware',
+            specs: [
+              { label: 'Leg Profile', value: isAlloy ? '50mm Hexagonal 6061-T6 Alloy' : '40mm Square Carbon Steel' },
+              { label: 'Wall Thickness', value: isAlloy ? '2.0mm Heavy-Duty' : '1.5mm Powder-Coated' },
+              { label: 'Height Lock', value: '5-Position Push-Pin Thumb Release' },
+              { label: 'Footpad Base', value: 'Cast Zinc-Alloy Ground Anchor Plate' }
+            ],
+            description: 'Reinforced telescoping upright corner leg engineered to absorb intense wind shear without buckling. Features push-button locking pins for effortless 60-second setup.'
+          })
+        } else if (hitName.includes('mechanism') || hit.parent?.name.toLowerCase().includes('mechanism')) {
+          setInspectedPart({
+            name: 'Diamond Lattice Scissor Truss Rods',
+            category: 'Kinematic Mechanism',
+            specs: [
+              { label: 'Structure', value: 'Cross-Scissor Accordion Truss' },
+              { label: 'Pivot Joints', value: 'Self-Lubricating Nylon Bushings' },
+              { label: 'Center Mast', value: 'Spring-Loaded Apex Peak Push-Up' },
+              { label: 'Wind Stability', value: 'Rated up to 28 mph with Ballast' }
+            ],
+            description: 'Double-reinforced cross truss bars forming an accordion pantograph frame that distributes roof tension uniformly across all 4 peaks and corners.'
+          })
+        } else if (hitName.includes('sandbag')) {
+          setInspectedPart({
+            name: 'Heavy-Duty Saddle Sandbag Ballasts',
+            category: 'Safety & Ballast',
+            specs: [
+              { label: 'Capacity', value: 'Holds up to 120 lbs (4 x 30 lbs)' },
+              { label: 'Textile', value: '1680D Ballistic Nylon' },
+              { label: 'Attachment', value: 'Double Velcro Wrap Around Leg' },
+              { label: 'Wind Resistance', value: 'Anchors canopy in 28+ mph winds' }
+            ],
+            description: 'Dual-cylinder saddle weight bags that wrap securely around each leg base. Prevents sudden gusts from lifting the canopy.'
+          })
+        } else if (hitName.includes('roller') || hitName.includes('bag')) {
+          setInspectedPart({
+            name: 'All-Terrain Wheeled Transit Bag',
+            category: 'Transport & Storage',
+            specs: [
+              { label: 'Shell Material', value: '1680D Ballistic Poly-PVC' },
+              { label: 'Caster Wheels', value: 'Dual Urethane Sealed Bearings' },
+              { label: 'Handles', value: 'Dual Molded Rubber Grip Haul Handles' },
+              { label: 'Pouch', value: 'Exterior Zipper Document Compartment' }
+            ],
+            description: 'Rugged commercial transport case engineered for rough trade show gravel and asphalt transport. Fits frame and folded canopy snugly.'
+          })
+        }
+      }
+    }
+
+    const domElement = renderer.domElement
+    domElement.addEventListener('click', handleClick)
+
     if (onCaptureSnapshotRef) {
       onCaptureSnapshotRef(() => {
         if (!rendererRef.current) return ''
@@ -216,6 +331,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
 
     return () => {
+      domElement.removeEventListener('click', handleClick)
       window.removeEventListener('resize', handleResize)
       cancelAnimationFrame(animationFrameId)
       renderer.dispose()
@@ -225,7 +341,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [])
 
-  // 2. Load 3D Model
+  // 2. Load 3D Tent Model
   useEffect(() => {
     if (!sceneRef.current || !modelGroupRef.current) return
 
@@ -245,16 +361,29 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         const root = gltf.scene
         root.scale.set(modelMeta.scale[0], modelMeta.scale[1], modelMeta.scale[2])
 
+        fabricMeshRef.current = null
+        legMeshRef.current = null
+        mechanismMeshRef.current = null
+
         root.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh
             mesh.castShadow = true
             mesh.receiveShadow = true
 
+            const nameLow = mesh.name.toLowerCase()
+            if (nameLow.includes('fabric') || mesh.name === 'Mesh') {
+              fabricMeshRef.current = mesh
+            } else if (nameLow.includes('leg') || mesh.name === 'Mesh.001') {
+              legMeshRef.current = mesh
+            } else if (nameLow.includes('mechanism') || mesh.name === 'Mesh.002') {
+              mechanismMeshRef.current = mesh
+            }
+
             const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
 
             materials.forEach((mat, idx) => {
-              if (mat.name === 'fabric_Mat' || mesh.name === 'Mesh.003' || mesh.name === 'Mesh') {
+              if (mat.name === 'fabric_Mat' || nameLow.includes('fabric') || mesh.name === 'Mesh') {
                 const canvasTex = textureSyncService.getTexture()
 
                 const newFabricMat = new THREE.MeshStandardMaterial({
@@ -271,7 +400,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
                   mesh.material = newFabricMat
                 }
                 fabricMaterialRef.current = newFabricMat
-              } else if (mat.name === 'Metal_mat') {
+              } else if (mat.name === 'Metal_mat' || nameLow.includes('leg') || nameLow.includes('mechanism')) {
                 const isAluminum = config.frameType === 'heavy_duty_aluminum'
                 const metalMat = new THREE.MeshStandardMaterial({
                   color: isAluminum ? 0xd1d5db : 0xffffff,
@@ -301,7 +430,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     )
   }, [config.modelId])
 
-  // 3. Update Hardware Material
+  // 3. Update Hardware Alloy Material
   useEffect(() => {
     if (metalMaterialRef.current) {
       const isAluminum = config.frameType === 'heavy_duty_aluminum'
@@ -312,7 +441,136 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [config.frameType])
 
-  // 4. Update Auto-Rotation
+  // 4. Load & Dynamically Attach Accessories
+  useEffect(() => {
+    if (!accessoriesGroupRef.current) return
+    const accGroup = accessoriesGroupRef.current
+    const loader = new GLTFLoader()
+
+    const hasSandbags = config.accessories.includes('sandbags')
+    const hasWheelbag = config.accessories.includes('wheelbag')
+    const hasStakes = config.accessories.includes('stakes')
+
+    // 1. Sandbags
+    if (hasSandbags && !sandbagsMeshRef.current) {
+      loader.load('/models/accessory_sandbags.glb', (gltf) => {
+        const obj = gltf.scene
+        // Snap-on drop animation
+        obj.position.y = 0.8
+        const startTime = performance.now()
+        const animateDrop = () => {
+          const elapsed = (performance.now() - startTime) / 1000
+          const t = Math.min(1, elapsed / 0.45)
+          // Elastic bounce down to 0
+          obj.position.y = 0.8 * (1 - t) * Math.cos(t * Math.PI * 2.5)
+          if (t < 1) {
+            requestAnimationFrame(animateDrop)
+          } else {
+            obj.position.y = 0
+          }
+        }
+        animateDrop()
+        accGroup.add(obj)
+        sandbagsMeshRef.current = obj
+      })
+    } else if (!hasSandbags && sandbagsMeshRef.current) {
+      accGroup.remove(sandbagsMeshRef.current)
+      sandbagsMeshRef.current = null
+    }
+
+    // 2. Wheelbag
+    if (hasWheelbag && !rollerBagMeshRef.current) {
+      loader.load('/models/accessory_wheelbag.glb', (gltf) => {
+        const obj = gltf.scene
+        obj.position.x = 2.4
+        const startTime = performance.now()
+        const animateSlide = () => {
+          const elapsed = (performance.now() - startTime) / 1000
+          const t = Math.min(1, elapsed / 0.4)
+          obj.position.x = 2.4 - t * 0.78
+          if (t < 1) {
+            requestAnimationFrame(animateSlide)
+          } else {
+            obj.position.x = 1.62
+          }
+        }
+        animateSlide()
+        accGroup.add(obj)
+        rollerBagMeshRef.current = obj
+      })
+    } else if (!hasWheelbag && rollerBagMeshRef.current) {
+      accGroup.remove(rollerBagMeshRef.current)
+      rollerBagMeshRef.current = null
+    }
+
+    // 3. Stakes & Guy lines
+    if (hasStakes && !stakesMeshRef.current) {
+      loader.load('/models/accessory_stakes.glb', (gltf) => {
+        const obj = gltf.scene
+        accGroup.add(obj)
+        stakesMeshRef.current = obj
+      })
+    } else if (!hasStakes && stakesMeshRef.current) {
+      accGroup.remove(stakesMeshRef.current)
+      stakesMeshRef.current = null
+    }
+  }, [config.accessories])
+
+  // 5. Toggle Human Scale Mannequin
+  useEffect(() => {
+    if (!mannequinGroupRef.current) return
+    const mGroup = mannequinGroupRef.current
+
+    if (showHumanScale && !mannequinMeshRef.current) {
+      const loader = new GLTFLoader()
+      loader.load('/models/scale_mannequin.glb', (gltf) => {
+        const obj = gltf.scene
+        mGroup.add(obj)
+        mannequinMeshRef.current = obj
+      })
+    } else if (!showHumanScale && mannequinMeshRef.current) {
+      mGroup.remove(mannequinMeshRef.current)
+      mannequinMeshRef.current = null
+    }
+  }, [showHumanScale])
+
+  // 6. Handle Exploded View Animation
+  useEffect(() => {
+    let animId: number
+    const target = isExploded ? 1.0 : 0.0
+
+    const step = () => {
+      setExplodedProgress((prev) => {
+        const diff = target - prev
+        if (Math.abs(diff) < 0.02) {
+          const finalVal = target
+          applyExplodedOffsets(finalVal)
+          return finalVal
+        }
+        const next = prev + diff * 0.12
+        applyExplodedOffsets(next)
+        animId = requestAnimationFrame(step)
+        return next
+      })
+    }
+
+    animId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(animId)
+  }, [isExploded])
+
+  const applyExplodedOffsets = (progress: number) => {
+    if (fabricMeshRef.current) {
+      fabricMeshRef.current.position.y = progress * 0.95
+    }
+    if (mechanismMeshRef.current) {
+      mechanismMeshRef.current.position.y = progress * 0.38
+    }
+    if (legMeshRef.current) {
+      legMeshRef.current.position.y = -progress * 0.05
+    }
+  }
+
+  // 7. Update Auto-Rotation
   useEffect(() => {
     if (controlsRef.current) {
       controlsRef.current.autoRotate = isAutoRotating
@@ -320,11 +578,10 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [isAutoRotating])
 
-  // 5. Rotate Smoothly to Side Function (Directional camera animation)
+  // 8. Rotate Smoothly to Side Function
   const rotateToSide = useCallback((side: TentSide) => {
     setActiveSide(side)
 
-    // Stop auto-rotate so model doesn't keep spinning to the right
     if (isAutoRotating) {
       toggleAutoRotate()
     }
@@ -350,22 +607,35 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     targetRadiusRef.current = 3.6
     isTransitioningRef.current = true
 
-    // Also synchronize active peak in the store
     const correspondingZoneId = `peak_${side}` as ZoneId
     if (activeZoneId !== correspondingZoneId && !activeZoneId.startsWith('valance_')) {
       setActiveZoneId(correspondingZoneId)
     }
   }, [isAutoRotating, toggleAutoRotate, activeZoneId, setActiveZoneId])
 
-  // When activeZoneId changes from the UI controls, rotate to its side
-  useEffect(() => {
-    const meta = ZONES_METADATA[activeZoneId]
-    if (meta && meta.side) {
-      if (meta.side !== activeSide) {
-        rotateToSide(meta.side)
+  // Switch Environment Handler
+  const handleSwitchEnvironment = (env: EnvironmentType) => {
+    setActiveEnv(env)
+    if (envBuilderRef.current) {
+      envBuilderRef.current.setEnvironment(env)
+    }
+    if (sceneRef.current) {
+      switch (env) {
+        case 'studio':
+          sceneRef.current.background = new THREE.Color(0xf8fafc)
+          break
+        case 'tradeshow':
+          sceneRef.current.background = new THREE.Color(0x1e293b)
+          break
+        case 'street':
+          sceneRef.current.background = new THREE.Color(0x38bdf8)
+          break
+        case 'park':
+          sceneRef.current.background = new THREE.Color(0x7dd3fc)
+          break
       }
     }
-  }, [activeZoneId])
+  }
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
@@ -383,7 +653,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[460px] bg-gradient-to-b from-slate-50 to-slate-100 overflow-hidden select-none"
+      className="relative w-full h-full min-h-[500px] overflow-hidden select-none"
     >
       {/* Loading Overlay */}
       {isLoadingModel && (
@@ -398,18 +668,35 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         </div>
       )}
 
-      {/* Top Floating Badge: Active Model & Footprint */}
-      <div className="absolute top-4 left-4 z-10 flex items-center space-x-2">
-        <div className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-xs font-bold text-slate-800">
+      {/* Top Left: Active Model & Footprint Pill */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col space-y-2">
+        <div className="px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-sm flex items-center space-x-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-xs font-black text-slate-900 font-sans">
             {modelMeta.dimensions}
           </span>
-          <span className="text-[10px] text-slate-400 font-mono">| 360° Studio</span>
+          <span className="text-[10px] text-slate-400 font-mono">
+            {config.frameType === 'heavy_duty_aluminum' ? '50mm Hex Alloy' : 'Steel Frame'}
+          </span>
         </div>
+
+        {/* Real-Life Scale Comparison HUD (When Mannequin is Active) */}
+        {showHumanScale && (
+          <div className="px-3 py-2 rounded-xl bg-slate-900/90 text-white backdrop-blur-md border border-slate-700 shadow-lg text-[11px] space-y-1 animate-in fade-in duration-200">
+            <div className="flex items-center space-x-1.5 text-amber-400 font-bold">
+              <User className="w-3.5 h-3.5" />
+              <span>Real-Life Scale Comparison</span>
+            </div>
+            <div className="text-[10px] text-slate-300 font-mono space-y-0.5">
+              <div>• Person Height: 1.80m (5'11")</div>
+              <div>• Valance Clearance: 2.10m (7'0")</div>
+              <div>• Peak Apex Height: 3.40m (11'2")</div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Floating Side Selector Pills (Direct model rotation controls) */}
+      {/* Top Right: Side View Selector Pills */}
       <div className="absolute top-4 right-4 z-10 flex items-center bg-white/95 backdrop-blur-md p-1 rounded-2xl border border-slate-200 shadow-sm">
         {(['front', 'right', 'back', 'left'] as TentSide[]).map((side) => {
           const isSelected = activeSide === side
@@ -429,15 +716,136 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         })}
       </div>
 
+      {/* Left Vertical Action Bar: Environments & Motion Modes */}
+      <div className="absolute top-16 left-4 z-10 flex flex-col space-y-2">
+        {/* Environment Switcher Dropdown / Pills */}
+        <div className="bg-white/95 backdrop-blur-md p-1 rounded-2xl border border-slate-200 shadow-sm flex flex-col space-y-1">
+          <span className="text-[9px] font-bold uppercase text-slate-400 px-2 py-0.5 text-center">
+            Environment
+          </span>
+          <button
+            onClick={() => handleSwitchEnvironment('studio')}
+            title="Studio Lighting"
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+              activeEnv === 'studio'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Sun className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Studio</span>
+          </button>
+          <button
+            onClick={() => handleSwitchEnvironment('tradeshow')}
+            title="Convention Center / Trade Show Booth"
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+              activeEnv === 'tradeshow'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Trade Show</span>
+          </button>
+          <button
+            onClick={() => handleSwitchEnvironment('street')}
+            title="Outdoor Street Expo / Farmers Market"
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+              activeEnv === 'street'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Sun className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Street Expo</span>
+          </button>
+          <button
+            onClick={() => handleSwitchEnvironment('park')}
+            title="Park / Festival Lawn"
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+              activeEnv === 'park'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <TreePine className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Park Lawn</span>
+          </button>
+        </div>
+
+        {/* Human Scale Mannequin Toggle */}
+        <button
+          onClick={() => setShowHumanScale(!showHumanScale)}
+          title="Compare with 1.8m Human Scale"
+          className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border backdrop-blur-md transition-all shadow-sm text-xs font-bold ${
+            showHumanScale
+              ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+              : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
+          }`}
+        >
+          <User className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">1.8m Scale</span>
+        </button>
+
+        {/* Exploded Engineering View Toggle */}
+        <button
+          onClick={() => setIsExploded(!isExploded)}
+          title="Exploded View (Inspect Bars, Fabric, Rods)"
+          className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border backdrop-blur-md transition-all shadow-sm text-xs font-bold ${
+            isExploded
+              ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-extrabold'
+              : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{isExploded ? 'Collapsed' : 'Exploded View'}</span>
+        </button>
+      </div>
+
+      {/* Part Inspection Drawer / Popup */}
+      {inspectedPart && (
+        <div className="absolute top-20 right-4 z-30 w-72 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-4 shadow-xl text-slate-800 animate-in fade-in slide-in-from-right-3 duration-200">
+          <div className="flex items-start justify-between pb-2 border-b border-slate-100">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider">
+                {inspectedPart.category}
+              </span>
+              <h3 className="text-xs font-black text-slate-900 leading-tight">
+                {inspectedPart.name}
+              </h3>
+            </div>
+            <button
+              onClick={() => setInspectedPart(null)}
+              className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="py-2.5 space-y-1.5 text-[11px] font-mono">
+            {inspectedPart.specs.map((s, idx) => (
+              <div key={idx} className="flex justify-between">
+                <span className="text-slate-500 font-sans">{s.label}:</span>
+                <span className="font-semibold text-slate-900">{s.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[10.5px] text-slate-500 leading-relaxed border-t border-slate-100 pt-2 font-sans">
+            {inspectedPart.description}
+          </p>
+        </div>
+      )}
+
       {/* Bottom Floating Control Bar */}
       <div className="absolute bottom-4 right-4 z-10 flex items-center space-x-2">
         <button
           onClick={toggleAutoRotate}
           title={isAutoRotating ? 'Stop Rotation' : 'Spin 360°'}
-          className={`flex items-center space-x-1 px-3 py-2 rounded-xl border backdrop-blur-md transition-all shadow-sm text-xs font-bold ${
+          className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border backdrop-blur-md transition-all shadow-sm text-xs font-bold ${
             isAutoRotating
               ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-              : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-white'
+              : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
           }`}
         >
           <Compass className={`w-3.5 h-3.5 ${isAutoRotating ? 'animate-spin' : ''}`} />
@@ -447,7 +855,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         <button
           onClick={() => rotateToSide('front')}
           title="Reset to Front View"
-          className="p-2.5 rounded-xl bg-white/90 text-slate-700 border border-slate-200 backdrop-blur-md hover:bg-white hover:text-slate-900 transition-all shadow-sm"
+          className="p-2.5 rounded-xl bg-white/95 text-slate-700 border border-slate-200 backdrop-blur-md hover:bg-white hover:text-slate-900 transition-all shadow-sm"
         >
           <RotateCcw className="w-3.5 h-3.5" />
         </button>
@@ -455,16 +863,16 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         <button
           onClick={toggleFullscreen}
           title="Toggle Fullscreen"
-          className="p-2.5 rounded-xl bg-white/90 text-slate-700 border border-slate-200 backdrop-blur-md hover:bg-white hover:text-slate-900 transition-all shadow-sm"
+          className="p-2.5 rounded-xl bg-white/95 text-slate-700 border border-slate-200 backdrop-blur-md hover:bg-white hover:text-slate-900 transition-all shadow-sm"
         >
           {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
         </button>
       </div>
 
       {/* Bottom Left: Orbit Interaction Legend */}
-      <div className="absolute bottom-4 left-4 z-10 pointer-events-none hidden sm:block">
-        <span className="text-[11px] text-slate-500 bg-white/80 px-3 py-1.5 rounded-lg border border-slate-200/80 backdrop-blur-sm">
-          Drag to Orbit • Scroll to Zoom
+      <div className="absolute bottom-4 left-4 z-10 hidden sm:flex items-center space-x-2">
+        <span className="text-[11px] text-slate-600 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 backdrop-blur-sm shadow-xs font-medium">
+          Drag to Orbit • Scroll to Zoom • Click 3D Parts to Inspect
         </span>
       </div>
     </div>

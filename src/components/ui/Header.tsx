@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
 import { ShoppingBag, FileDown, RotateCcw, Sparkles, ChevronDown } from 'lucide-react'
 import { formatCurrency } from '../../utils/gstUtils'
+import { ProductModelId } from '../../types/configurator'
 
 interface HeaderProps {
   onExportPdf: () => void
@@ -10,6 +11,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
   const {
+    config,
+    setModelId,
     pricing,
     currency,
     setCurrency,
@@ -25,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
   return (
     <header className="h-16 px-6 bg-white border-b border-slate-200 flex items-center justify-between z-30 sticky top-0 shadow-sm select-none">
       {/* Brand & Store Nav */}
-      <div className="flex items-center space-x-8">
-        <div className="flex items-center space-x-2.5 cursor-pointer">
+      <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-2.5 cursor-pointer" onClick={resetConfig}>
           <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center font-black text-white text-sm tracking-tight shadow-sm">
             MVP
           </div>
@@ -38,13 +41,23 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
           </div>
         </div>
 
-        {/* Shopify Theme Nav Links */}
-        <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
-          <span className="text-slate-900 border-b-2 border-slate-900 pb-0.5 cursor-pointer">Custom Canopy Tents</span>
-          <span className="hover:text-slate-900 transition-colors cursor-pointer">Table Covers</span>
-          <span className="hover:text-slate-900 transition-colors cursor-pointer">Feather Flags</span>
-          <span className="hover:text-slate-900 transition-colors cursor-pointer">Trade Show Displays</span>
-        </nav>
+        {/* Quick Footprint Size Selector (Fully Clickable) */}
+        <div className="hidden lg:flex items-center space-x-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+          <span className="text-[10px] uppercase font-bold text-slate-400 px-2">Size:</span>
+          {(['5x5', '6.5x6.5', '8x8', '10x10'] as ProductModelId[]).map((mId) => (
+            <button
+              key={mId}
+              onClick={() => setModelId(mId)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                config.modelId === mId
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {mId}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Right Actions: Presets, Currency Toggle, Live Price & Shopify Cart */}
