@@ -20,7 +20,8 @@ import {
   Sun,
   X,
   Sliders,
-  Check
+  Check,
+  Ruler
 } from 'lucide-react'
 
 interface TentViewportProps {
@@ -34,6 +35,150 @@ interface PartInspectionData {
   category: string
   specs: Array<{ label: string; value: string }>
   description: string
+}
+
+/**
+ * Builds authentic Heavy-Duty Spiral Ground Stakes & Taut Guy Ropes
+ * Anchors firmly at ground level (Y = 0) and connects accurately to the 4 canopy corner brackets
+ */
+function createSpiralStakesGroup(scale: [number, number, number], canopyYOffset: number = 0): THREE.Group {
+  const group = new THREE.Group()
+  group.name = 'SpiralStakesAndRopes'
+
+  const sx = scale[0]
+  const sy = scale[1]
+  const sz = scale[2]
+
+  // Corner bracket locations on canopy valance
+  const cornerX = 1.206 * sx
+  const cornerZ = 1.206 * sz
+  const bracketY = (1.50 * sy) + canopyYOffset
+
+  // Stake ground distance (outward diagonal from leg)
+  const stakeOutset = 0.65
+  const stakeX = cornerX + stakeOutset
+  const stakeZ = cornerZ + stakeOutset
+
+  const stakeCoords = [
+    { cx: cornerX, cz: cornerZ, sx: stakeX, sz: stakeZ },
+    { cx: -cornerX, cz: cornerZ, sx: -stakeX, sz: stakeZ },
+    { cx: cornerX, cz: -cornerZ, sx: stakeX, sz: -stakeZ },
+    { cx: -cornerX, cz: -cornerZ, sx: -stakeX, sz: -stakeZ }
+  ]
+
+  const stakeMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8, // Zinc-plated galvanized steel
+    metalness: 0.9,
+    roughness: 0.25
+  })
+
+  const ropeMat = new THREE.MeshStandardMaterial({
+    color: 0xf97316, // High-vis fluorescent orange guyline
+    roughness: 0.6,
+    metalness: 0.05
+  })
+
+  const sliderMat = new THREE.MeshStandardMaterial({
+    color: 0x334155, // Aluminum tensioner runner tab
+    metalness: 0.85,
+    roughness: 0.3
+  })
+
+  stakeCoords.forEach(({ cx, cz, sx: stX, sz: stZ }) => {
+    // 1. Heavy-Duty Spiral Ground Stake Assembly
+    const stakeContainer = new THREE.Group()
+    stakeContainer.position.set(stX, 0, stZ)
+
+    const outwardAngle = Math.atan2(stZ, stX)
+    stakeContainer.rotation.y = -outwardAngle
+
+    // Ground Auger Spiral Blade at turf level
+    const spiralGeo = new THREE.TorusGeometry(0.045, 0.007, 8, 16)
+    const spiralMesh = new THREE.Mesh(spiralGeo, stakeMat)
+    spiralMesh.rotation.x = Math.PI / 2
+    spiralMesh.position.set(0, 0.015, 0)
+    stakeContainer.add(spiralMesh)
+
+    // Steel Shaft driven into ground (tilted backward 25 deg against rope pull)
+    const shaftGeo = new THREE.CylinderGeometry(0.012, 0.007, 0.28, 10)
+    const shaftMesh = new THREE.Mesh(shaftGeo, stakeMat)
+    shaftMesh.rotation.x = 0.38
+    shaftMesh.position.set(0, 0.06, 0.025)
+    stakeContainer.add(shaftMesh)
+
+    // Top Eyelet Ring
+    const eyeletGeo = new THREE.TorusGeometry(0.024, 0.007, 8, 16)
+    const eyeletMesh = new THREE.Mesh(eyeletGeo, stakeMat)
+    eyeletMesh.position.set(0, 0.16, 0.065)
+    stakeContainer.add(eyeletMesh)
+
+    group.add(stakeContainer)
+
+    // 2. Taut Guy Rope from Canopy Corner Bracket to Stake Eyelet
+    const startPt = new THREE.Vector3(cx, bracketY, cz)
+    const endPt = new THREE.Vector3(stX, 0.16, stZ)
+    const diff = new THREE.Vector3().subVectors(endPt, startPt)
+    const ropeLen = diff.length()
+    const midPt = new THREE.Vector3().addVectors(startPt, endPt).multiplyScalar(0.5)
+
+    const ropeGeo = new THREE.CylinderGeometry(0.004, 0.004, ropeLen, 8)
+    const ropeMesh = new THREE.Mesh(ropeGeo, ropeMat)
+    ropeMesh.position.copy(midPt)
+
+    // Orient cylinder along rope vector
+    const up = new THREE.Vector3(0, 1, 0)
+    const dir = diff.clone().normalize()
+    const axis = new THREE.Vector3().crossVectors(up, dir).normalize()
+    const angle = Math.acos(Math.max(-1, Math.min(1, up.dot(dir))))
+    ropeMesh.quaternion.setFromAxisAngle(axis, angle)
+    group.add(ropeMesh)
+
+    // 3. Tensioner Slider Runner Tab
+    const sliderGeo = new THREE.BoxGeometry(0.015, 0.045, 0.012)
+    const sliderMesh = new THREE.Mesh(sliderGeo, sliderMat)
+    sliderMesh.position.lerpVectors(endPt, startPt, 0.35)
+    sliderMesh.quaternion.copy(ropeMesh.quaternion)
+    group.add(sliderMesh)
+  })
+
+  return group
+}
+
+/**
+ * Builds a 3D measurement dimension ruler next to the person with metric & imperial labels
+ */
+function createPersonDimensionRuler(): THREE.Group {
+  const rulerGroup = new THREE.Group()
+  rulerGroup.name = 'DimensionRuler'
+
+  const rulerMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b }) // Amber 500
+  const tickMat = new THREE.MeshBasicMaterial({ color: 0x1e293b })
+
+  // Position bracket right next to person at (1.10m, 0, 1.40m)
+  rulerGroup.position.set(1.10, 0, 1.40)
+
+  // Vertical height line from ground (Y=0) to person height (Y=1.80m)
+  const poleGeo = new THREE.CylinderGeometry(0.003, 0.003, 1.80, 8)
+  const poleMesh = new THREE.Mesh(poleGeo, rulerMat)
+  poleMesh.position.set(0, 0.90, 0)
+  rulerGroup.add(poleMesh)
+
+  // Bottom Ground Tick (0.00m / 0')
+  const bottomTick = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.006, 0.006), tickMat)
+  bottomTick.position.set(0, 0.003, 0)
+  rulerGroup.add(bottomTick)
+
+  // Person Height Tick (1.80m / 5' 11")
+  const personTick = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.008, 0.006), rulerMat)
+  personTick.position.set(0, 1.80, 0)
+  rulerGroup.add(personTick)
+
+  // Valance Clearance Tick (2.10m / 6' 11")
+  const valanceTick = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.008, 0.006), tickMat)
+  valanceTick.position.set(0, 2.10, 0)
+  rulerGroup.add(valanceTick)
+
+  return rulerGroup
 }
 
 export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef }) => {
@@ -55,7 +200,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
   // Accessory meshes
   const sandbagsMeshRef = useRef<THREE.Object3D | null>(null)
   const rollerBagMeshRef = useRef<THREE.Object3D | null>(null)
-  const stakesMeshRef = useRef<THREE.Object3D | null>(null)
+  const stakesGroupRef = useRef<THREE.Group | null>(null)
   const mannequinMeshRef = useRef<THREE.Object3D | null>(null)
 
   // Materials refs
@@ -89,6 +234,8 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     isAutoRotating,
     toggleAutoRotate
   } = useConfiguratorStore()
+
+  const modelMeta = TENT_MODELS[config.modelId]
 
   // 1. Initialize Three.js Scene, Camera, Lighting & Controls
   useEffect(() => {
@@ -314,6 +461,18 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
             ],
             description: 'Rugged commercial transport case engineered for rough trade show gravel and asphalt transport. Fits frame and folded canopy snugly.'
           })
+        } else if (hitName.includes('stake') || hitName.includes('rope')) {
+          setInspectedPart({
+            name: 'Heavy-Duty Spiral Earth Stakes & Ropes',
+            category: 'Ground Anchoring',
+            specs: [
+              { label: 'Anchor Type', value: '12-inch Zinc-Plated Spiral Auger' },
+              { label: 'Guy Line Cord', value: '4mm High-Vis Braided Poly Core' },
+              { label: 'Tensioner', value: 'Anodized 3-Hole Aluminum Runner' },
+              { label: 'Hold Force', value: 'Tested to 180 lbs vertical pull' }
+            ],
+            description: 'Spiral corkscrew earth stakes driven firmly into the ground with high-strength tensioned guy lines connecting directly to the four canopy corner truss brackets.'
+          })
         }
       }
     }
@@ -350,7 +509,6 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
       modelGroup.remove(modelGroup.children[0])
     }
 
-    const modelMeta = TENT_MODELS[config.modelId]
     const loader = new GLTFLoader()
 
     loader.load(
@@ -364,12 +522,12 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
         let legNode: THREE.Object3D | null = null
         let mechNode: THREE.Object3D | null = null
 
-        // 1. Exact name match
+        // Exact name match
         fabNode = root.getObjectByName('fabric') || null
         legNode = root.getObjectByName('leg') || root.getObjectByName('leg5') || null
         mechNode = root.getObjectByName('mechanism') || root.getObjectByName('mechanism3') || null
 
-        // 2. Child traversal fallback
+        // Child traversal fallback
         if (!fabNode || !legNode || !mechNode) {
           root.children.forEach((child) => {
             const low = child.name.toLowerCase()
@@ -447,6 +605,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
 
         // Reapply active exploded state if already exploded
         applyExplodedOffsets(isExploded ? 1.0 : 0.0)
+
+        // Rebuild dynamic stakes if active
+        if (config.accessories.includes('stakes')) {
+          rebuildStakes(modelMeta.scale, isExploded ? 0.82 : 0)
+        }
       },
       undefined,
       (error) => {
@@ -475,6 +638,21 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }, [config.frameType])
 
+  // Helper to rebuild stakes and guy lines anchored firmly to ground and canopy corners
+  const rebuildStakes = (scale: [number, number, number], canopyYOffset: number = 0) => {
+    if (!accessoriesGroupRef.current) return
+    const accGroup = accessoriesGroupRef.current
+
+    if (stakesGroupRef.current) {
+      accGroup.remove(stakesGroupRef.current)
+      stakesGroupRef.current = null
+    }
+
+    const stakesGroup = createSpiralStakesGroup(scale, canopyYOffset)
+    accGroup.add(stakesGroup)
+    stakesGroupRef.current = stakesGroup
+  }
+
   // 5. Load & Dynamically Attach Accessories
   useEffect(() => {
     if (!accessoriesGroupRef.current) return
@@ -489,6 +667,8 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     if (hasSandbags && !sandbagsMeshRef.current) {
       loader.load('/models/accessory_sandbags.glb', (gltf) => {
         const obj = gltf.scene
+        // Scale sandbags to match tent footprint
+        obj.scale.set(modelMeta.scale[0], 1, modelMeta.scale[2])
         obj.position.y = 0.8
         const startTime = performance.now()
         const animateDrop = () => {
@@ -514,16 +694,17 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     if (hasWheelbag && !rollerBagMeshRef.current) {
       loader.load('/models/accessory_wheelbag.glb', (gltf) => {
         const obj = gltf.scene
-        obj.position.x = 2.4
+        const targetX = 1.62 * modelMeta.scale[0]
+        obj.position.x = targetX + 0.8
         const startTime = performance.now()
         const animateSlide = () => {
           const elapsed = (performance.now() - startTime) / 1000
           const t = Math.min(1, elapsed / 0.4)
-          obj.position.x = 2.4 - t * 0.78
+          obj.position.x = targetX + 0.8 * (1 - t)
           if (t < 1) {
             requestAnimationFrame(animateSlide)
           } else {
-            obj.position.x = 1.62
+            obj.position.x = targetX
           }
         }
         animateSlide()
@@ -535,36 +716,43 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
       rollerBagMeshRef.current = null
     }
 
-    // 3. Stakes & Guy lines
-    if (hasStakes && !stakesMeshRef.current) {
-      loader.load('/models/accessory_stakes.glb', (gltf) => {
-        const obj = gltf.scene
-        accGroup.add(obj)
-        stakesMeshRef.current = obj
-      })
-    } else if (!hasStakes && stakesMeshRef.current) {
-      accGroup.remove(stakesMeshRef.current)
-      stakesMeshRef.current = null
+    // 3. Heavy-Duty Spiral Stakes & Guy Lines (100% Ground Anchored & Taut)
+    if (hasStakes) {
+      rebuildStakes(modelMeta.scale, isExploded ? 0.82 : 0)
+    } else if (!hasStakes && stakesGroupRef.current) {
+      accGroup.remove(stakesGroupRef.current)
+      stakesGroupRef.current = null
     }
-  }, [config.accessories])
+  }, [config.accessories, config.modelId])
 
-  // 6. Toggle Human Scale Mannequin
+  // 6. Toggle Realistic Person Model & 3D Dimension Ruler
   useEffect(() => {
     if (!mannequinGroupRef.current) return
     const mGroup = mannequinGroupRef.current
 
     if (showHumanScale && !mannequinMeshRef.current) {
       const loader = new GLTFLoader()
-      loader.load('/models/scale_mannequin.glb', (gltf) => {
+      // Load realistic human figure
+      loader.load('/models/scale_person.glb', (gltf) => {
         const obj = gltf.scene
+        // Position standing at the front opening of the canopy
+        const scale = modelMeta.scale[0]
+        obj.position.set(0.70 * scale, 0, 1.25 * scale)
         mGroup.add(obj)
         mannequinMeshRef.current = obj
+
+        // Also add 3D measurement dimension ruler
+        const ruler = createPersonDimensionRuler()
+        ruler.position.set(0.95 * scale, 0, 1.25 * scale)
+        mGroup.add(ruler)
       })
     } else if (!showHumanScale && mannequinMeshRef.current) {
-      mGroup.remove(mannequinMeshRef.current)
+      while (mGroup.children.length > 0) {
+        mGroup.remove(mGroup.children[0])
+      }
       mannequinMeshRef.current = null
     }
-  }, [showHumanScale])
+  }, [showHumanScale, config.modelId])
 
   // 7. Exploded View Smooth Interpolation & Camera Reframing
   useEffect(() => {
@@ -619,6 +807,11 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
     if (legGroupRef.current) {
       legGroupRef.current.position.y = 0.0
+    }
+
+    // Update guy lines if stakes are active to remain taut
+    if (config.accessories.includes('stakes') && stakesGroupRef.current) {
+      rebuildStakes(modelMeta.scale, progress * 0.82)
     }
   }
 
@@ -700,8 +893,6 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
     }
   }
 
-  const modelMeta = TENT_MODELS[config.modelId]
-
   return (
     <div
       ref={containerRef}
@@ -732,17 +923,35 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
           </span>
         </div>
 
-        {/* Real-Life Scale Comparison HUD (When Mannequin is Active) */}
+        {/* Real-Life Scale Comparison HUD (Meters & Feet/Inches) */}
         {showHumanScale && (
-          <div className="px-3 py-2 rounded-xl bg-slate-900/90 text-white backdrop-blur-md border border-slate-700 shadow-lg text-[11px] space-y-1 animate-in fade-in duration-200">
-            <div className="flex items-center space-x-1.5 text-amber-400 font-bold">
-              <User className="w-3.5 h-3.5" />
-              <span>Real-Life Scale Comparison</span>
+          <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/95 text-white backdrop-blur-md border border-blue-500/50 shadow-xl text-[11px] space-y-1.5 animate-in fade-in slide-in-from-left-2 duration-200">
+            <div className="flex items-center justify-between text-blue-400 font-bold">
+              <div className="flex items-center space-x-1.5">
+                <Ruler className="w-3.5 h-3.5" />
+                <span>Real-Life Scale Comparison</span>
+              </div>
+              <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                Metric + Imperial
+              </span>
             </div>
-            <div className="text-[10px] text-slate-300 font-mono space-y-0.5">
-              <div>• Person Height: 1.80m (5'11")</div>
-              <div>• Valance Clearance: 2.10m (7'0")</div>
-              <div>• Peak Apex Height: 3.40m (11'2")</div>
+            <div className="text-[10px] text-slate-200 font-mono space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Person Height:</span>
+                <span className="font-bold text-amber-400">1.80 m (5 ft 11 in)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Valance Clearance:</span>
+                <span className="font-bold text-emerald-400">2.10 m (6 ft 11 in)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Peak Apex Height:</span>
+                <span className="font-bold text-sky-400">3.40 m (11 ft 2 in)</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-slate-800">
+                <span className="text-slate-400">Booth Footprint:</span>
+                <span className="font-semibold text-slate-300">{modelMeta.dimensions}</span>
+              </div>
             </div>
           </div>
         )}
@@ -849,18 +1058,18 @@ export const TentViewport: React.FC<TentViewportProps> = ({ onCaptureSnapshotRef
           </button>
         </div>
 
-        {/* Human Scale Mannequin Toggle */}
+        {/* Real Person Scale Toggle (Meters & Feet/Inches) */}
         <button
           onClick={() => setShowHumanScale(!showHumanScale)}
-          title="Compare with 1.8m Human Scale"
+          title="Compare with 1.80m (5'11'') Real Person"
           className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border backdrop-blur-md transition-all shadow-sm text-xs font-bold ${
             showHumanScale
-              ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+              ? 'bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-400/50'
               : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
           }`}
         >
           <User className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">1.8m Scale</span>
+          <span className="hidden sm:inline">1.8m Person (5'11")</span>
         </button>
 
         {/* Exploded Engineering View Toggle */}
