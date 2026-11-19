@@ -2,6 +2,8 @@ export type ProductModelId = '5x5' | '6.5x6.5' | '8x8' | '10x10'
 
 export type FrameType = 'commercial_steel' | 'heavy_duty_aluminum'
 
+export type CurrencyCode = 'INR' | 'USD'
+
 export type ZoneId = 
   | 'peak_front' 
   | 'peak_back' 
@@ -58,6 +60,9 @@ export interface AccessoryItem {
   name: string
   description: string
   price: number
+  priceINR?: number
+  priceUSD?: number
+  hsnCode?: string
   imageUrl?: string
   included?: boolean
 }
@@ -70,16 +75,38 @@ export interface TentConfig {
   accessories: string[] // accessory IDs
 }
 
+export interface HsnSummaryItem {
+  hsnCode: string
+  description: string
+  taxableValue: number
+  cgstRate: number
+  cgstAmount: number
+  sgstRate: number
+  sgstAmount: number
+  totalTax: number
+}
+
 export interface PricingBreakdown {
+  currency: CurrencyCode
+  currencySymbol: string
   basePrice: number
   printCostPerZone: number
   customizedZonesCount: number
   printTotal: number
   frameUpgradeCost: number
   accessoriesTotal: number
-  subtotal: number
-  estimatedTax: number
+  subtotal: number // Taxable Amount
+  // Statutory Indian GST 18% (Rule 46 CGST Act)
+  cgstRate: number // 9%
+  cgstAmount: number
+  sgstRate: number // 9%
+  sgstAmount: number
+  igstRate: number // 18%
+  igstAmount: number
+  totalGst: number
+  estimatedTax: number // Backward compatibility alias for total tax
   finalTotal: number
+  hsnSummary: HsnSummaryItem[]
 }
 
 export interface ShopifyCartLineItem {
@@ -90,3 +117,4 @@ export interface ShopifyCartLineItem {
   price: number
   properties: Record<string, string>
 }
+

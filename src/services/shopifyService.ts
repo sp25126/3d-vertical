@@ -39,6 +39,8 @@ class ShopifyService {
 
     const configId = `CFG-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
+    const isINR = pricing.currency === 'INR'
+
     const lineItem: ShopifyCartLineItem = {
       id: `item-${Date.now()}`,
       variantId: `gid://shopify/ProductVariant/${config.modelId.replace('.', '_')}`,
@@ -51,10 +53,14 @@ class ShopifyService {
         'Canopy Color': config.fabricBaseColor,
         'Customized Zones': printedZones.length > 0 ? printedZones.join(', ') : 'None (Solid Blank)',
         'Included Accessories': accessoriesNames.length > 0 ? accessoriesNames.join(', ') : 'None',
+        'Tax Compliance': isINR ? 'GST 18% (HSN 6306 22 00)' : 'Standard Sales Tax Included',
         '_config_id': configId,
-        '_base_price': `$${pricing.basePrice.toFixed(2)}`,
-        '_print_cost': `$${pricing.printTotal.toFixed(2)}`,
-        '_accessories_cost': `$${pricing.accessoriesTotal.toFixed(2)}`,
+        '_currency': pricing.currency,
+        '_taxable_base_price': `${pricing.currencySymbol}${pricing.basePrice.toFixed(2)}`,
+        '_print_cost': `${pricing.currencySymbol}${pricing.printTotal.toFixed(2)}`,
+        '_accessories_cost': `${pricing.currencySymbol}${pricing.accessoriesTotal.toFixed(2)}`,
+        '_tax_amount': `${pricing.currencySymbol}${pricing.totalGst.toFixed(2)}`,
+        '_hsn_sac_codes': '63062200, 998912',
         '_preview_thumbnail': previewImageUrl || '',
         '_created_at': new Date().toISOString()
       }

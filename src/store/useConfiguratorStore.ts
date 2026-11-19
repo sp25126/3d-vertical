@@ -8,7 +8,8 @@ import {
   PricingBreakdown,
   ShopifyCartLineItem,
   TextElement,
-  ImageElement
+  ImageElement,
+  CurrencyCode
 } from '../types/configurator'
 import { pricingService } from '../services/pricingService'
 import { shopifyService } from '../services/shopifyService'
@@ -25,7 +26,7 @@ const DEFAULT_ZONES: Record<ZoneId, { zoneId: ZoneId; elements: CustomElement[] 
 }
 
 const INITIAL_CONFIG: TentConfig = {
-  modelId: '8x8',
+  modelId: '10x10',
   frameType: 'commercial_steel',
   fabricBaseColor: '#F6AF2D', // MVP Visuals Classic Gold/Amber
   zones: { ...DEFAULT_ZONES },
@@ -34,6 +35,7 @@ const INITIAL_CONFIG: TentConfig = {
 
 interface ConfiguratorState {
   config: TentConfig
+  currency: CurrencyCode
   activeZoneId: ZoneId
   selectedElementId: string | null
   pricing: PricingBreakdown
@@ -46,6 +48,7 @@ interface ConfiguratorState {
   isAutoRotating: boolean
 
   // Actions
+  setCurrency: (currency: CurrencyCode) => void
   setModelId: (modelId: ProductModelId) => void
   setFrameType: (frameType: FrameType) => void
   setFabricBaseColor: (color: string) => void
@@ -69,18 +72,29 @@ interface ConfiguratorState {
 
 export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
   config: INITIAL_CONFIG,
+  currency: 'INR',
   activeZoneId: 'peak_front',
   selectedElementId: null,
   pricing: {
-    basePrice: 899,
-    printCostPerZone: 45,
+    currency: 'INR',
+    currencySymbol: '₹',
+    basePrice: 19999,
+    printCostPerZone: 950,
     customizedZonesCount: 0,
     printTotal: 0,
     frameUpgradeCost: 0,
-    accessoriesTotal: 49,
-    subtotal: 948,
-    estimatedTax: 75.84,
-    finalTotal: 1023.84
+    accessoriesTotal: 1250,
+    subtotal: 21249,
+    cgstRate: 9,
+    cgstAmount: 1912.41,
+    sgstRate: 9,
+    sgstAmount: 1912.41,
+    igstRate: 18,
+    igstAmount: 0,
+    totalGst: 3824.82,
+    estimatedTax: 3824.82,
+    finalTotal: 25073.82,
+    hsnSummary: []
   },
   isPricingLoading: false,
   isCartOpen: false,
@@ -90,10 +104,15 @@ export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
   isWireframeVisible: false,
   isAutoRotating: false,
 
+  setCurrency: (currency) => {
+    set({ currency })
+    get().fetchPricing()
+  },
+
   fetchPricing: async () => {
     set({ isPricingLoading: true })
     try {
-      const breakdown = await pricingService.calculatePrice(get().config)
+      const breakdown = await pricingService.calculatePrice(get().config, get().currency)
       set({ pricing: breakdown, isPricingLoading: false })
     } catch (e) {
       console.error('Pricing calculation failed', e)

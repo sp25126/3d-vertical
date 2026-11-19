@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
-import { ShoppingBag, FileDown, RotateCcw, Sparkles, ChevronDown, Check } from 'lucide-react'
+import { ShoppingBag, FileDown, RotateCcw, Sparkles, ChevronDown } from 'lucide-react'
+import { formatCurrency } from '../../utils/gstUtils'
 
 interface HeaderProps {
   onExportPdf: () => void
@@ -10,6 +11,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
   const {
     pricing,
+    currency,
+    setCurrency,
     isPricingLoading,
     cart,
     toggleCart,
@@ -44,8 +47,32 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
         </nav>
       </div>
 
-      {/* Right Actions: Presets, Live Price & Shopify Cart */}
-      <div className="flex items-center space-x-4">
+      {/* Right Actions: Presets, Currency Toggle, Live Price & Shopify Cart */}
+      <div className="flex items-center space-x-3.5">
+        {/* Currency Switcher (INR / USD) */}
+        <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-[11px] font-bold">
+          <button
+            onClick={() => setCurrency('INR')}
+            className={`px-2.5 py-1 rounded-md transition-all ${
+              currency === 'INR'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            ₹ INR (GST)
+          </button>
+          <button
+            onClick={() => setCurrency('USD')}
+            className={`px-2.5 py-1 rounded-md transition-all ${
+              currency === 'USD'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            $ USD
+          </button>
+        </div>
+
         {/* Sample Brand Presets */}
         <div className="relative">
           <button
@@ -53,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
             className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span className="hidden sm:inline">Design Presets</span>
+            <span className="hidden sm:inline">Presets</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
@@ -87,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
                 className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex flex-col border-t border-slate-100"
               >
                 <span className="font-bold text-amber-600">Default MVP Amber</span>
-                <span className="text-[10px] text-slate-500">8x8 • Classic Gold Dye</span>
+                <span className="text-[10px] text-slate-500">10x10 • Classic Gold Dye</span>
               </button>
             </div>
           )}
@@ -104,19 +131,22 @@ export const Header: React.FC<HeaderProps> = ({ onExportPdf, onAddToCart }) => {
 
         {/* Dynamic Price Block */}
         <div className="flex flex-col items-end">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+            {currency === 'INR' ? 'Total (Incl. 18% GST)' : 'Total Quote'}
+          </span>
           <span className="font-mono text-base font-extrabold text-slate-900">
-            {isPricingLoading ? '...' : `$${pricing.finalTotal.toFixed(2)}`}
+            {isPricingLoading ? '...' : formatCurrency(pricing.finalTotal, currency)}
           </span>
         </div>
 
-        {/* Spec PDF Button */}
+        {/* GST Invoice / Spec PDF Button */}
         <button
           onClick={onExportPdf}
-          className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          title="Download Official GST Tax Invoice & Technical Prepress Proof"
+          className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs font-bold text-amber-900 transition-colors shadow-xs"
         >
-          <FileDown className="w-3.5 h-3.5 text-slate-500" />
-          <span>Spec PDF</span>
+          <FileDown className="w-3.5 h-3.5 text-amber-600" />
+          <span>GST Bill (PDF)</span>
         </button>
 
         {/* Shopify Cart Trigger Button */}

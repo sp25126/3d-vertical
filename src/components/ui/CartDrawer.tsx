@@ -1,20 +1,22 @@
 import React, { useState } from 'react'
 import { useConfiguratorStore } from '../../store/useConfiguratorStore'
-import { X, ShoppingBag, ArrowRight, CheckCircle2, FileDown, ShieldCheck } from 'lucide-react'
+import { X, ShoppingBag, ArrowRight, CheckCircle2, FileDown, ShieldCheck, Receipt } from 'lucide-react'
 import confetti from 'canvas-confetti'
+import { formatCurrency, formatInvoiceAmount } from '../../utils/gstUtils'
 
 interface CartDrawerProps {
   onExportPdf: () => void
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
-  const { isCartOpen, toggleCart, cart } = useConfiguratorStore()
+  const { isCartOpen, toggleCart, cart, currency, pricing } = useConfiguratorStore()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [checkoutCompleted, setCheckoutCompleted] = useState(false)
 
   if (!isCartOpen) return null
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const isINR = currency === 'INR'
 
   const handleMockCheckout = () => {
     setIsCheckingOut(true)
@@ -80,7 +82,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
                   className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold flex items-center justify-center space-x-2 transition-all shadow-sm"
                 >
                   <FileDown className="w-4 h-4" />
-                  <span>Download Production Spec PDF</span>
+                  <span>{isINR ? 'Download GST Tax Invoice & Spec PDF' : 'Download Production Spec PDF'}</span>
                 </button>
 
                 <button
@@ -114,7 +116,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
                     <span className="text-[11px] text-slate-500 font-mono">Qty: {item.quantity}</span>
                   </div>
                   <span className="text-sm font-mono font-bold text-slate-900">
-                    ${item.price.toFixed(2)}
+                    {formatCurrency(item.price, currency)}
                   </span>
                 </div>
 
@@ -139,6 +141,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
                       <span>{item.properties['_config_id']}</span>
                     </div>
                   )}
+                  {isINR && (
+                    <div className="flex items-center space-x-1.5 pt-1 text-[10px] text-blue-700 font-bold border-t border-slate-100">
+                      <Receipt className="w-3 h-3" />
+                      <span>HSN: 6306 22 00 • GST 18% Compliant</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -148,14 +156,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onExportPdf }) => {
         {/* Footer Checkout Actions */}
         {!checkoutCompleted && cart.length > 0 && (
           <div className="p-5 border-t border-slate-200 bg-white space-y-3">
-            <div className="space-y-1 text-xs">
+            <div className="space-y-1 text-xs font-mono">
               <div className="flex justify-between">
-                <span className="text-slate-500">Estimated Total:</span>
-                <span className="font-mono text-slate-900 font-bold text-sm">${subtotal.toFixed(2)} USD</span>
+                <span className="text-slate-500 font-sans">Total {isINR ? '(Incl. 18% GST):' : 'Estimated Total:'}</span>
+                <span className="text-slate-900 font-bold text-sm">
+                  {formatCurrency(subtotal, currency)}
+                </span>
               </div>
-              <div className="flex justify-between text-[11px] text-slate-500">
+              <div className="flex justify-between text-[11px] text-slate-500 font-sans">
                 <span>Shipping:</span>
-                <span className="text-emerald-600 font-semibold">Free Ground Shipping</span>
+                <span className="text-emerald-600 font-semibold">Free Surface / Ground Shipping</span>
               </div>
             </div>
 

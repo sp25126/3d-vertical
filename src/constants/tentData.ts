@@ -4,7 +4,10 @@ export interface ModelMetadata {
   id: ProductModelId
   name: string
   dimensions: string
-  basePrice: number
+  basePrice: number // Active base price
+  basePriceINR: number
+  basePriceUSD: number
+  hsnCode: string
   glbPath: string
   scale: [number, number, number]
   features: string[]
@@ -15,25 +18,34 @@ export const TENT_MODELS: Record<ProductModelId, ModelMetadata> = {
     id: '5x5',
     name: "5' x 5' Compact Pop-Up Canopy",
     dimensions: "5ft x 5ft (1.5m x 1.5m)",
-    basePrice: 599,
+    basePrice: 11999,
+    basePriceINR: 11999,
+    basePriceUSD: 599,
+    hsnCode: '6306 22 00',
     glbPath: '/models/tent_5x5.glb',
     scale: [1, 1, 1],
-    features: ['Instant 60s setup', '600D UV-coated polyester', 'Commercial steel or aluminum']
+    features: ['Instant 60s pop-up setup', '600D PU waterproof polyester', 'Heavy-duty truss construction']
   },
   '6.5x6.5': {
     id: '6.5x6.5',
     name: "6.5' x 6.5' Medium Event Canopy",
     dimensions: "6.5ft x 6.5ft (2.0m x 2.0m)",
-    basePrice: 749,
+    basePrice: 14499,
+    basePriceINR: 14499,
+    basePriceUSD: 749,
+    hsnCode: '6306 22 00',
     glbPath: '/models/tent_6.5x6.5.glb',
     scale: [1, 1, 1],
-    features: ['Mid-tier footprint', 'Reinforced truss bars', 'Water-resistant & fire-rated']
+    features: ['Mid-tier footprint', 'Reinforced truss joints', 'UV50+ & fire-retardant fabric']
   },
   '8x8': {
     id: '8x8',
     name: "8' x 8' Heavy-Duty Commercial Canopy",
     dimensions: "8ft x 8ft (2.4m x 2.4m)",
-    basePrice: 899,
+    basePrice: 16999,
+    basePriceINR: 16999,
+    basePriceUSD: 899,
+    hsnCode: '6306 22 00',
     glbPath: '/models/tent_8x8.glb',
     scale: [1, 1, 1],
     features: ['High-traffic trade show spec', 'Hexagonal leg profiles', 'Lifetime frame warranty']
@@ -42,24 +54,41 @@ export const TENT_MODELS: Record<ProductModelId, ModelMetadata> = {
     id: '10x10',
     name: "10' x 10' Flagship Pro Canopy",
     dimensions: "10ft x 10ft (3.0m x 3.0m)",
-    basePrice: 1049,
+    basePrice: 19999,
+    basePriceINR: 19999,
+    basePriceUSD: 1049,
+    hsnCode: '6306 22 00',
     glbPath: '/models/tent_8x8.glb',
     scale: [1.25, 1.25, 1.25],
-    features: ['Industry standard 10x10', 'Dye-sublimation edge-to-edge 4K', 'Lifetime frame warranty']
+    features: ['Industry standard 10x10 footprint', 'Edge-to-edge 4K dye-sublimation print', 'Lifetime frame warranty']
   }
 }
 
-export const FRAME_TYPES: Record<FrameType, { name: string; priceDelta: number; desc: string; badge: string }> = {
+export const FRAME_TYPES: Record<FrameType, {
+  name: string
+  priceDelta: number
+  priceDeltaINR: number
+  priceDeltaUSD: number
+  hsnCode: string
+  desc: string
+  badge: string
+}> = {
   commercial_steel: {
     name: 'Commercial White Steel Frame',
     priceDelta: 0,
+    priceDeltaINR: 0,
+    priceDeltaUSD: 0,
+    hsnCode: '7326 90 99',
     desc: 'Heavy-duty steel with rust-resistant powder coat finish (52 lbs)',
     badge: 'Standard'
   },
   heavy_duty_aluminum: {
     name: 'Heavy-Duty 50mm Hex Aluminum Frame',
-    priceDelta: 120,
-    desc: '40% lighter, corrosion-proof, 50mm hexagonal aircraft-grade legs (38 lbs)',
+    priceDelta: 3500,
+    priceDeltaINR: 3500,
+    priceDeltaUSD: 120,
+    hsnCode: '7610 90 90',
+    desc: '40% lighter, corrosion-proof, 50mm hexagonal aircraft-grade alloy (38 lbs)',
     badge: 'Pro Upgrade'
   }
 }
@@ -82,19 +111,28 @@ export const ACCESSORIES: AccessoryItem[] = [
     id: 'sandbags',
     name: 'Heavy-Duty Sandbag Weights (Set of 4)',
     description: 'Holds up to 120 lbs total to anchor canopy in winds up to 28 mph.',
-    price: 49
+    price: 1250,
+    priceINR: 1250,
+    priceUSD: 49,
+    hsnCode: '6306 90 00'
   },
   {
     id: 'wheelbag',
     name: 'All-Terrain Wheeled Transit Roller Bag',
     description: 'Rugged 1680D ballistic nylon with smooth urethane wheels.',
-    price: 69
+    price: 1850,
+    priceINR: 1850,
+    priceUSD: 69,
+    hsnCode: '4202 92 00'
   },
   {
     id: 'stakes',
     name: 'Heavy-Duty Spiral Ground Stakes & Ropes',
     description: 'Four 12-inch zinc-plated steel spiral stakes and tie-down guy ropes.',
-    price: 29
+    price: 750,
+    priceINR: 750,
+    priceUSD: 29,
+    hsnCode: '7326 90 99'
   }
 ]
 
@@ -104,17 +142,15 @@ export interface ZoneMeta {
   shortLabel: string
   side: 'front' | 'right' | 'back' | 'left'
   group: 'peak' | 'valance'
-  azimuthAngle: number // Exact horizontal angle in radians
-  polarAngle: number   // Exact vertical angle in radians
+  azimuthAngle: number
+  polarAngle: number
   distance: number
   printCost: number
+  printCostINR: number
+  printCostUSD: number
+  hsnCode: string
 }
 
-// Coordinate system:
-// Front (+Z): azimuth = 0
-// Right (+X): azimuth = Math.PI / 2
-// Back (-Z): azimuth = Math.PI
-// Left (-X): azimuth = -Math.PI / 2
 export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
   peak_front: {
     id: 'peak_front',
@@ -125,7 +161,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: 0,
     polarAngle: Math.PI / 2.3,
     distance: 3.5,
-    printCost: 45
+    printCost: 950,
+    printCostINR: 950,
+    printCostUSD: 45,
+    hsnCode: '9989 12'
   },
   peak_right: {
     id: 'peak_right',
@@ -136,7 +175,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: Math.PI / 2,
     polarAngle: Math.PI / 2.3,
     distance: 3.5,
-    printCost: 45
+    printCost: 950,
+    printCostINR: 950,
+    printCostUSD: 45,
+    hsnCode: '9989 12'
   },
   peak_back: {
     id: 'peak_back',
@@ -147,7 +189,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: Math.PI,
     polarAngle: Math.PI / 2.3,
     distance: 3.5,
-    printCost: 45
+    printCost: 950,
+    printCostINR: 950,
+    printCostUSD: 45,
+    hsnCode: '9989 12'
   },
   peak_left: {
     id: 'peak_left',
@@ -158,7 +203,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: -Math.PI / 2,
     polarAngle: Math.PI / 2.3,
     distance: 3.5,
-    printCost: 45
+    printCost: 950,
+    printCostINR: 950,
+    printCostUSD: 45,
+    hsnCode: '9989 12'
   },
   valance_front: {
     id: 'valance_front',
@@ -169,7 +217,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: 0,
     polarAngle: Math.PI / 2.15,
     distance: 3.2,
-    printCost: 25
+    printCost: 550,
+    printCostINR: 550,
+    printCostUSD: 25,
+    hsnCode: '9989 12'
   },
   valance_right: {
     id: 'valance_right',
@@ -180,7 +231,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: Math.PI / 2,
     polarAngle: Math.PI / 2.15,
     distance: 3.2,
-    printCost: 25
+    printCost: 550,
+    printCostINR: 550,
+    printCostUSD: 25,
+    hsnCode: '9989 12'
   },
   valance_back: {
     id: 'valance_back',
@@ -191,7 +245,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: Math.PI,
     polarAngle: Math.PI / 2.15,
     distance: 3.2,
-    printCost: 25
+    printCost: 550,
+    printCostINR: 550,
+    printCostUSD: 25,
+    hsnCode: '9989 12'
   },
   valance_left: {
     id: 'valance_left',
@@ -202,7 +259,10 @@ export const ZONES_METADATA: Record<ZoneId, ZoneMeta> = {
     azimuthAngle: -Math.PI / 2,
     polarAngle: Math.PI / 2.15,
     distance: 3.2,
-    printCost: 25
+    printCost: 550,
+    printCostINR: 550,
+    printCostUSD: 25,
+    hsnCode: '9989 12'
   }
 }
 
