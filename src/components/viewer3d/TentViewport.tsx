@@ -281,6 +281,17 @@ export const TentViewport: React.FC<TentViewportProps> = ({
   const [explodedProgress, setExplodedProgress] = useState<number>(0)
   const [inspectedPart, setInspectedPart] = useState<PartInspectionData | null>(null)
 
+  const isExplodedRef = useRef<boolean>(false)
+  const showHumanScaleRef = useRef<boolean>(false)
+
+  useEffect(() => {
+    isExplodedRef.current = isExploded
+  }, [isExploded])
+
+  useEffect(() => {
+    showHumanScaleRef.current = showHumanScale
+  }, [showHumanScale])
+
   const {
     config,
     activeZoneId,
@@ -319,7 +330,7 @@ export const TentViewport: React.FC<TentViewportProps> = ({
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.15
+    renderer.toneMappingExposure = 1.0
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
@@ -336,29 +347,37 @@ export const TentViewport: React.FC<TentViewportProps> = ({
       isTransitioningRef.current = false
     })
 
-    // Lighting Setup
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1)
+    // Balanced Commercial Studio 3-Point Lighting & Contrast Grading
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35)
     scene.add(ambientLight)
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 0.8)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x475569, 0.35)
     hemiLight.position.set(0, 10, 0)
     scene.add(hemiLight)
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4)
-    keyLight.position.set(4, 9, 5)
+    // Key Light: Warm soft sunlight creating clean canopy facet modeling
+    const keyLight = new THREE.DirectionalLight(0xfffbeb, 1.35)
+    keyLight.position.set(4.5, 8.0, 4.5)
     keyLight.castShadow = true
     keyLight.shadow.mapSize.width = 2048
     keyLight.shadow.mapSize.height = 2048
     keyLight.shadow.bias = -0.0001
     scene.add(keyLight)
 
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.7)
-    fillLight.position.set(-5, 4, -4)
+    // Fill Light: Soft neutral sky bounce fill
+    const fillLight = new THREE.DirectionalLight(0xf1f5f9, 0.60)
+    fillLight.position.set(-4.5, 3.5, 3.0)
     scene.add(fillLight)
 
-    const backRimLight = new THREE.DirectionalLight(0xffedd5, 0.5)
-    backRimLight.position.set(0, 6, -5)
+    // Rim Light: Edge separation on apex ridge and valance trims
+    const backRimLight = new THREE.DirectionalLight(0xe0f2fe, 0.80)
+    backRimLight.position.set(0, 6.0, -5.0)
     scene.add(backRimLight)
+
+    // Front Eyeball Light: Subtle frontal fill to reveal custom printed logo details
+    const frontEyeballLight = new THREE.DirectionalLight(0xffffff, 0.40)
+    frontEyeballLight.position.set(0, 2.0, 4.5)
+    scene.add(frontEyeballLight)
 
     // Dynamic Contextual Environment Builder
     const envBuilder = new EnvironmentBuilder()
@@ -539,8 +558,82 @@ export const TentViewport: React.FC<TentViewportProps> = ({
 
     if (onCaptureSnapshotRef) {
       onCaptureSnapshotRef(() => {
-        if (!rendererRef.current) return ''
-        return rendererRef.current.domElement.toDataURL('image/png', 0.95)
+        if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return ''
+
+        const camera = cameraRef.current
+        const renderer = rendererRef.current
+        const scene = sceneRef.current
+
+        // 1. Save live camera transform & target
+        const savedPos = camera.position.clone()
+        const savedTarget = controlsRef.current ? controlsRef.current.target.clone() : new THREE.Vector3(0, 1.05, 0)
+        const savedFov = camera.fov
+
+        // 2. Read live configuration to frame active model size exactly
+        const currentModelId = useConfiguratorStore.getState().config.modelId || '10x10'
+        const currentCalib = MODEL_CALIBRATION[currentModelId] || MODEL_CALIBRATION['10x10']
+
+        // Exact physical peak apex height:
+        // 5x5: 2.13m, 6.5x6.5: 2.44m, 8x8: 2.62m, 10x10: 3.40m
+        const apexHeight = currentModelId === '10x10' ? 3.40 : currentModelId === '8x8' ? 2.62 : currentModelId === '6.5x6.5' ? 2.44 : 2.13
+        const halfWidth = currentCalib.legX
+
+        // Target center Y at 46% of peak apex height
+        const targetCenterY = apexHeight * 0.46
+
+        // Mathematically calibrated distance ensuring full canopy apex, legs and ground shadows fit with 25% margin
+        const distFromHeight = (apexHeight * 1.38) / (2 * Math.tan(THREE.MathUtils.degToRad(17)))
+        const distFromWidth = (halfWidth * 2 * Math.SQRT2 * 1.25) / (2 * Math.tan(THREE.MathUtils.degToRad(25)))
+        const heroDist = Math.max(5.8, distFromHeight, distFromWidth)
+
+        // 3/4 elevated isometric studio beauty angle
+        camera.fov = 34
+        camera.position.set(heroDist * 0.72, apexHeight * 0.65, heroDist * 0.72)
+        camera.lookAt(0, targetCenterY, 0)
+        camera.updateProjectionMatrix()
+
+        // Temporarily reset exploded offset if active so the tent is shown assembled in its hero state
+        const wasExploded = isExplodedRef.current
+        if (wasExploded && fabricGroupRef.current) {
+          fabricGroupRef.current.position.y = 0
+          if (mechanismGroupRef.current) {
+            mechanismGroupRef.current.position.y = 0
+          }
+        }
+
+        // Hide mannequin scale figure in formal product shot
+        let mannequinWasVisible = false
+        if (mannequinGroupRef.current && mannequinGroupRef.current.visible) {
+          mannequinWasVisible = true
+          mannequinGroupRef.current.visible = false
+        }
+
+        // 3. Render high-res beauty snapshot
+        renderer.render(scene, camera)
+        const snapshotUrl = renderer.domElement.toDataURL('image/png', 1.0)
+
+        // 4. Restore live state
+        if (wasExploded && fabricGroupRef.current) {
+          fabricGroupRef.current.position.y = currentCalib.liftOffset
+          if (mechanismGroupRef.current) {
+            mechanismGroupRef.current.position.y = currentCalib.liftOffset * 0.45
+          }
+        }
+        if (mannequinWasVisible && mannequinGroupRef.current) {
+          mannequinGroupRef.current.visible = true
+        }
+
+        camera.fov = savedFov
+        camera.position.copy(savedPos)
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(savedTarget)
+          controlsRef.current.update()
+        }
+        camera.lookAt(savedTarget)
+        camera.updateProjectionMatrix()
+        renderer.render(scene, camera)
+
+        return snapshotUrl
       })
     }
 

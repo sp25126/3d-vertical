@@ -30,6 +30,16 @@ export function formatInvoiceAmount(amount: number, currency: CurrencyCode = 'IN
 }
 
 /**
+ * Formats amount for PDF exports using ASCII standard currency codes (prevents jsPDF font encoding bugs)
+ */
+export function formatPdfCurrency(amount: number, currency: CurrencyCode = 'INR'): string {
+  if (currency === 'INR') {
+    return `INR ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+  return `USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+/**
  * Converts Indian Rupee amounts into statutory words representation
  * Compliant with Rule 46 of CGST Rules, 2017
  */
