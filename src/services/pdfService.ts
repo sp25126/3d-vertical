@@ -175,15 +175,15 @@ export async function generateProductionPdf({
   // --- 4. Itemized GST Billing Table ---
   // Perfectly calibrated columns across 186mm width
   const colX = {
-    sno: margin + 2.5,                  // S.No left
-    desc: margin + 9,                   // Desc left
-    hsn: margin + 80,                   // HSN left
-    qty: margin + 104,                  // Qty right
-    rate: margin + 124,                 // Rate right
-    taxable: margin + 144,              // Taxable right
-    cgst: margin + 160,                 // CGST right
-    sgst: margin + 176,                 // SGST right
-    total: pageWidth - margin - 2.5     // Total right
+    sno: margin + 2.5,        // 14.5
+    desc: margin + 8.5,       // 20.5
+    hsn: margin + 62.0,       // 74.0
+    qty: margin + 86.0,       // 98.0
+    rate: margin + 107.0,     // 119.0
+    taxable: margin + 128.0,  // 140.0
+    cgst: margin + 146.0,     // 158.0
+    sgst: margin + 164.0,     // 176.0
+    total: pageWidth - margin - 2.5 // 195.5
   }
 
   const tableHeaderH = 6.5
@@ -191,7 +191,7 @@ export async function generateProductionPdf({
   doc.rect(margin, y, contentWidth, tableHeaderH, 'F')
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6.8)
+  doc.setFontSize(6.6)
   doc.setTextColor(255, 255, 255)
   doc.text('#', colX.sno, y + 4.5)
   doc.text('Description of Goods / Services', colX.desc, y + 4.5)
@@ -354,7 +354,7 @@ export async function generateProductionPdf({
 
   // --- 5. HSN Tax Summary Schedule & Totals Split ---
   const totalsY = y + 2.5
-  const leftSummaryW = contentWidth * 0.55
+  const leftSummaryW = contentWidth * 0.54
   const rightTotalsX = margin + leftSummaryW + 3.5
   const rightTotalsW = contentWidth - leftSummaryW - 3.5
 
@@ -369,11 +369,20 @@ export async function generateProductionPdf({
   doc.rect(margin, hsnTableY, leftSummaryW, 5.0, 'F')
   doc.setFontSize(6.2)
   doc.setTextColor(30, 41, 59)
-  doc.text('HSN/SAC', margin + 2.5, hsnTableY + 3.5)
-  doc.text(`Taxable Val (${currTag})`, margin + 30, hsnTableY + 3.5, { align: 'right' })
-  doc.text('CGST (9%)', margin + 49, hsnTableY + 3.5, { align: 'right' })
-  doc.text('SGST (9%)', margin + 68, hsnTableY + 3.5, { align: 'right' })
-  doc.text(`Total Tax (${currTag})`, margin + leftSummaryW - 2.5, hsnTableY + 3.5, { align: 'right' })
+
+  const hsnCol = {
+    hsn: margin + 2.5,
+    taxable: margin + 39.0,
+    cgst: margin + 58.0,
+    sgst: margin + 77.0,
+    total: margin + leftSummaryW - 2.5
+  }
+
+  doc.text('HSN/SAC', hsnCol.hsn, hsnTableY + 3.5)
+  doc.text(`Taxable Val (${currTag})`, hsnCol.taxable, hsnTableY + 3.5, { align: 'right' })
+  doc.text('CGST (9%)', hsnCol.cgst, hsnTableY + 3.5, { align: 'right' })
+  doc.text('SGST (9%)', hsnCol.sgst, hsnTableY + 3.5, { align: 'right' })
+  doc.text(`Total Tax (${currTag})`, hsnCol.total, hsnTableY + 3.5, { align: 'right' })
 
   hsnTableY += 5.0
   doc.setFont('helvetica', 'normal')
@@ -384,11 +393,11 @@ export async function generateProductionPdf({
       doc.rect(margin, hsnTableY, leftSummaryW, 4.2, 'F')
     }
     doc.setTextColor(51, 65, 85)
-    doc.text(hsn.hsnCode, margin + 2.5, hsnTableY + 3.2)
-    doc.text(hsn.taxableValue.toFixed(2), margin + 30, hsnTableY + 3.2, { align: 'right' })
-    doc.text(hsn.cgstAmount.toFixed(2), margin + 49, hsnTableY + 3.2, { align: 'right' })
-    doc.text(hsn.sgstAmount.toFixed(2), margin + 68, hsnTableY + 3.2, { align: 'right' })
-    doc.text(hsn.totalTax.toFixed(2), margin + leftSummaryW - 2.5, hsnTableY + 3.2, { align: 'right' })
+    doc.text(hsn.hsnCode, hsnCol.hsn, hsnTableY + 3.2)
+    doc.text(hsn.taxableValue.toFixed(2), hsnCol.taxable, hsnTableY + 3.2, { align: 'right' })
+    doc.text(hsn.cgstAmount.toFixed(2), hsnCol.cgst, hsnTableY + 3.2, { align: 'right' })
+    doc.text(hsn.sgstAmount.toFixed(2), hsnCol.sgst, hsnTableY + 3.2, { align: 'right' })
+    doc.text(hsn.totalTax.toFixed(2), hsnCol.total, hsnTableY + 3.2, { align: 'right' })
     hsnTableY += 4.2
   })
 
